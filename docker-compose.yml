@@ -28,28 +28,63 @@ services:
       context: ./pipeline
     depends_on:
       - mongo
+    networks:
+      - kafka-network
     environment:
       KAFKA_BROKER_URL: kafka:9092
 
   kafka:
     image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
     ports:
       - "9092:9092"
     environment:
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://0.0.0.0:9092
+      KAFKA_LISTENERS: INSIDE://0.0.0.0:9092
+      KAFKA_LISTENER_NAMES: INSIDE
+      KAFKA_LISTENER_NAME_INSIDE_SECURITY_PROTOCOL: PLAINTEXT
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+    expose:
+      - "9092"
+    networks:
+      - kafka-network
     depends_on:
       - zookeeper
 
   zookeeper:
     image: bitnami/zookeeper:3.9.0
+    container_name: zookeeper
     ports:
       - "2181:2181"
     environment:
-      environment:
       ALLOW_ANONYMOUS_LOGIN: "yes"
       ZOOKEEPER_CLIENT_PORT: 2181
+    expose:
+      - "2181"
+    networks:
+      - kafka-network
+
+  elasticsearch:
+    image: elasticsearch:8.15.3
+    ports:
+      - "9200:9200"
+    environment:
+      discovery.type: 'single-node'
+      ES_JAVA_OPTS: '-Xmx2g -Xms2g'
+
+  kibana:
+    image: kibana:8.15.3
+    volumes:
+      - "./fastapi/kibana.yml:/usr/share/kibana/config/kibana.yml"
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME}
+      ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD}
 
 volumes:
   mongo_data:
+
+networks:
+  kafka-network:
+    driver: bridge

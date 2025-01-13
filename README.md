@@ -23,7 +23,7 @@ my-docker-project
 │   ├── generate_readme.py
 │   ├── Dockerfile
 │   └── requirements.txt
-├── kafka-spark
+├── pipeline
 │   ├── kafka_producer.py
 │   ├── spark_consumer.py
 │   ├── Dockerfile

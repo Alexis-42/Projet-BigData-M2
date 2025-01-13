@@ -1,28 +1,20 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List
+from dependencies import get_db_connection
+from models import Item, Repo
 
 router = APIRouter()
 
-class Item(BaseModel):
-    id: str
-    name: str
-    description: str
-
 items_db = []
 
-@router.post("/items/", response_model=Item)
-def create_item(item: Item):
-    items_db.append(item)
-    return item
+@router.get("/repos/", response_model=List[Repo])
+async def read_repos(db=Depends(get_db_connection)):
+    repos = await db.repos.find().to_list(100)
+    return repos
 
-@router.get("/items/", response_model=List[Item])
-def read_items():
-    return items_db
-
-@router.get("/items/{item_id}", response_model=Item)
-def read_item(item_id: str):
-    for item in items_db:
-        if item.id == item_id:
-            return item
-    raise HTTPException(status_code=404, detail="Item not found")
+@router.get("/repos/{repo_id}", response_model=Repo)
+async def read_repo(repo_id: str, db=Depends(get_db_connection)):
+    repo = await db.repos.find_one({"_id": repo_id})
+    if repo is None:
+        raise HTTPException(status_code=404, detail="Repo not found")
+    return repo

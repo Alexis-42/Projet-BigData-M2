@@ -12,7 +12,7 @@ def create_spark_session():
 
 def consume_messages(spark):
     consumer = KafkaConsumer(
-        'your_topic_name',
+        'add_to_db',
         bootstrap_servers='kafka:9092',
         value_deserializer=lambda m: json.loads(m.decode('utf-8'))
     )

@@ -1,5 +1,7 @@
 kafka-python
 pyspark
+pymongo
 pandas
+requests
 numpy
 python-dotenv

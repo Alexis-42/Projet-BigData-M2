@@ -1,0 +1,8 @@
+FROM mongo:latest
+
+# Expose the default MongoDB port
+EXPOSE 27017
+
+# Set the environment variable for MongoDB
+ENV MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+ENV MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}

@@ -1,0 +1,7 @@
+Flask
+numpy
+pandas
+transformers
+torch
+openai
+requests

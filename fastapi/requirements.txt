@@ -1,0 +1,7 @@
+FastAPI==0.78.0
+uvicorn==0.18.2
+pydantic==1.9.0
+motor==2.5.1
+elasticsearch==7.16.0
+kibana
+httpx==0.23.0

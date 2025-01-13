@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from dependencies import get_db_connection
-from models import Item, Repo
+from models import Repo
 
 router = APIRouter()
 

@@ -8,9 +8,9 @@ class ES_connector:
 
     def connect(self):
         # we can put host and port in config or env
-        host = "172.31.96.1"
+        host = "elasticsearch"
         port = "9200"
-        es = Elasticsearch([{'host': host, 'port': port}])
+        es = Elasticsearch(f"http://{host}:{port}")
         self.es_client = es
         
     def index_data(self, index_name: str, data: dict) -> dict:

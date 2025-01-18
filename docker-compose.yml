@@ -54,6 +54,7 @@ services:
     environment:
       discovery.type: 'single-node'
       xpack.security.enabled: 'false'
+      ELASTIC_PASSWORD: ${ELASTICSEARCH_PASSWORD}
     networks:
       - elastic-network
       
@@ -61,8 +62,13 @@ services:
     image: kibana:8.15.3
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME}
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
+      - xpack.screenshotting.browser.chromium.disableSandbox='true'
     ports:
       - 5601:5601
+    networks:
+    - elastic-network
   
 networks:
   elastic-network:

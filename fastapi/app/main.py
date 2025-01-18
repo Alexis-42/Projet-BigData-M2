@@ -1,6 +1,7 @@
 from typing import Optional
 from fastapi import FastAPI
 from es_connector import ES_connector
+import uvicorn
 
 app = FastAPI()
 
@@ -41,3 +42,6 @@ def store_data(index_name: str, data: dict) -> dict:
         }
     except Exception as e:
         raise Exception(f"Failed to index data: {str(e)}")
+   
+if __name__ == "__main__":
+	uvicorn.run(app, host="0.0.0.0", port=8000)

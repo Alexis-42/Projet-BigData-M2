@@ -28,4 +28,3 @@ def process_message(spark, message):
 
 if __name__ == "__main__":
     spark = create_spark_session()
-    consume_messages(spark)

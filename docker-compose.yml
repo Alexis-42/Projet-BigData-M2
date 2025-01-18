@@ -1,23 +1,13 @@
 services:
-  mongo:
-    build:
-      context: ./mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    env_file: 
-      - .env
-
   fastapi:
     build:
       context: ./fastapi
     ports:
       - "8000:8000"
     depends_on:
-      - mongo
-    environment:
-      - MONGO_URI=mongodb://mongo:27017
+      - elasticsearch
+    networks:
+      - elastic-network
 
   model:
     build:
@@ -25,11 +15,61 @@ services:
     depends_on:
       - fastapi
 
-  kafka-spark:
+  pipeline-data-retrieval:
     build:
-      context: ./kafka-spark
+      context: ./pipeline/data-retrieval
     depends_on:
-      - mongo
+      - kafka
+      - fastapi
+    environment:
+      KAFKA_BROKER_URL: kafka:9092
+      
 
-volumes:
-  mongo_data:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.4
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 22181:2181
+  
+  kafka:
+    image: confluentinc/cp-kafka:7.4.4
+    depends_on:
+      - zookeeper
+    ports:
+      - 29092:29092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1  
+
+  elasticsearch:
+    image: elasticsearch:8.15.3
+    ports:
+      - 9200:9200
+    environment:
+      discovery.type: 'single-node'
+      xpack.security.enabled: 'false'
+      ELASTIC_PASSWORD: ${ELASTICSEARCH_PASSWORD}
+    networks:
+      - elastic-network
+      
+  kibana:
+    image: kibana:8.15.3
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME}
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
+      - xpack.screenshotting.browser.chromium.disableSandbox='true'
+    ports:
+      - 5601:5601
+    networks:
+    - elastic-network
+  
+networks:
+  elastic-network:
+    driver: bridge

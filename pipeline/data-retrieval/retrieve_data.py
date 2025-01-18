@@ -24,4 +24,4 @@ if __name__ == "__main__":
         }
         send_message(producer, topic, message)
         print(f"Sent: {message}")
-        time.sleep(5)  # Adjust the sleep time as needed
+        time.sleep(5)

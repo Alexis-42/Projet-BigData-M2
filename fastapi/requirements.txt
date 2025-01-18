@@ -5,4 +5,6 @@ motor==2.5.1
 elasticsearch==7.16.0
 kibana
 motor
+sentence_transformers
+python-dotenv
 httpx==0.23.0

@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "kafka_producer.py"]
+CMD ["python", "retrieve_data.py"]

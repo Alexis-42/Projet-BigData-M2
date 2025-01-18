@@ -1,21 +1,13 @@
 services:
-  mongo:
-    build:
-      context: ./mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    env_file: 
-      - .env
-
   fastapi:
     build:
       context: ./fastapi
     ports:
       - "8000:8000"
     depends_on:
-      - kafka
+      - elasticsearch
+    networks:
+      - elastic-network
 
   model:
     build:
@@ -23,68 +15,55 @@ services:
     depends_on:
       - fastapi
 
-  pipeline:
+  pipeline-data-retrieval:
     build:
-      context: ./pipeline
+      context: ./pipeline/data-retrieval
     depends_on:
-      - mongo
-    networks:
-      - kafka-network
+      - kafka
+      - fastapi
     environment:
       KAFKA_BROKER_URL: kafka:9092
-
-  kafka:
-    image: confluentinc/cp-kafka:7.4.0
-    container_name: kafka
-    ports:
-      - "9092:9092"
-    environment:
-      KAFKA_ADVERTISED_LISTENERS: INSIDE://0.0.0.0:9092
-      KAFKA_LISTENERS: INSIDE://0.0.0.0:9092
-      KAFKA_LISTENER_NAMES: INSIDE
-      KAFKA_LISTENER_NAME_INSIDE_SECURITY_PROTOCOL: PLAINTEXT
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-    expose:
-      - "9092"
-    networks:
-      - kafka-network
-    depends_on:
-      - zookeeper
+      
 
   zookeeper:
-    image: bitnami/zookeeper:3.9.0
-    container_name: zookeeper
-    ports:
-      - "2181:2181"
+    image: confluentinc/cp-zookeeper:7.4.4
     environment:
-      ALLOW_ANONYMOUS_LOGIN: "yes"
       ZOOKEEPER_CLIENT_PORT: 2181
-    expose:
-      - "2181"
-    networks:
-      - kafka-network
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 22181:2181
+  
+  kafka:
+    image: confluentinc/cp-kafka:7.4.4
+    depends_on:
+      - zookeeper
+    ports:
+      - 29092:29092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1  
 
   elasticsearch:
     image: elasticsearch:8.15.3
     ports:
-      - "9200:9200"
+      - 9200:9200
     environment:
       discovery.type: 'single-node'
-      ES_JAVA_OPTS: '-Xmx2g -Xms2g'
-
+      xpack.security.enabled: 'false'
+    networks:
+      - elastic-network
+      
   kibana:
     image: kibana:8.15.3
-    volumes:
-      - "./fastapi/kibana.yml:/usr/share/kibana/config/kibana.yml"
-    ports:
-      - "5601:5601"
     environment:
-      ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME}
-      ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD}
-
-volumes:
-  mongo_data:
-
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - 5601:5601
+  
 networks:
-  kafka-network:
+  elastic-network:
     driver: bridge

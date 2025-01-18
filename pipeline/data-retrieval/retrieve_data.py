@@ -4,7 +4,7 @@ import time
 
 def create_producer():
     producer = KafkaProducer(
-        bootstrap_servers='kafka:9092',
+        bootstrap_servers=['kafka:9092'],
         value_serializer=lambda v: json.dumps(v).encode('utf-8')
     )
     return producer
@@ -24,4 +24,4 @@ if __name__ == "__main__":
         }
         send_message(producer, topic, message)
         print(f"Sent: {message}")
-        time.sleep(5)  # Adjust the sleep time as needed
+        time.sleep(5)

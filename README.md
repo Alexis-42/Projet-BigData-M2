@@ -2,10 +2,9 @@
 
 This project is a multi-container Docker application that includes the following components:
 
-- **MongoDB**: A NoSQL database used to store application data.
 - **FastAPI**: A modern web framework for building APIs with Python, which interacts with MongoDB and utilizes Elasticsearch and Kibana for data communication.
-- **LLM Model**: A language model that generates README files based on input specifications.
-- **Kafka and Spark**: A data pipeline that continuously fills the MongoDB database with data.
+- **LLM**: A language model that generates README files based on input specifications.
+- **Pipeline**: A data pipeline that continuously fills the MongoDB database with data.
 
 ## Project Structure
 
@@ -23,13 +22,11 @@ my-docker-project
 │   ├── generate_readme.py
 │   ├── Dockerfile
 │   └── requirements.txt
-├── kafka-spark
+├── pipeline
 │   ├── kafka_producer.py
 │   ├── spark_consumer.py
 │   ├── Dockerfile
 │   └── requirements.txt
-├── mongo
-│   └── Dockerfile
 ├── docker-compose.yml
 └── README.md
 ```

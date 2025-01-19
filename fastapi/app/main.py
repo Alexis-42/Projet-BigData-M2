@@ -30,8 +30,11 @@ def search(q: str, number_of_result: Optional[int] = 1):
         }
     }
     raw_results = es.get_data(default_index_name, search_query, number_of_result)
-    repos = [Repo(**hit["_source"]) for hit in raw_results["hits"]["hits"]]
-    return repos
+    if(raw_results is None or raw_results["hits"]["total"]["value"] == 0):
+        return []
+    else:
+        repos = [Repo(**hit["_source"]) for hit in raw_results["hits"]["hits"]]
+        return repos
 
 
 """

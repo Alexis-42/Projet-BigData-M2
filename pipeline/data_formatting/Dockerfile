@@ -6,8 +6,8 @@ RUN apt-get update && apt-get install -y python3 python3-pip
 
 # Installer PySpark
 RUN pip3 install pyspark
-RUN pip3 install kafka-python
-
+RUN pip3 install kafka-python==2.0.2
+RUN pip3 install requests
 
 # Copier le code Python dans le conteneur
 WORKDIR /app

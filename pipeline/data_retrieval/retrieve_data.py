@@ -34,9 +34,9 @@ def get_repos():
                 if(fetch_and_check_readme(repo)):
                     data_repos.append({
                         "name": repo["name"],
-                        "html_url": repo["html_url"],
                         "description": repo["description"],
-                        "readme" : repo["readme_content"]
+                        "readme" : repo["readme_content"],
+                        "html_url": repo["html_url"]
                     })
             return data_repos
         else:

@@ -8,6 +8,7 @@ services:
       - elasticsearch
     networks:
       - elastic-network
+      - fastapi-network
 
   model:
     build:
@@ -19,43 +20,80 @@ services:
     build:
       context: ./pipeline/data_retrieval
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
+      init-kafka:
+        condition: service_completed_successfully
     environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_BROKER_URL: kafka:29092
     env_file:
       - .env
+    networks:
+      - kafka-network
+      
 
   pipeline-data-formatting:
     build:
       context: ./pipeline/data_formatting
     depends_on:
-      - kafka
-      - fastapi
+      kafka:
+        condition: service_healthy
+      init-kafka:
+        condition: service_completed_successfully
     environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_BROKER_URL: kafka:29092
+    networks:
+      - kafka-network
+      - fastapi-network
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.4.4
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - 22181:2181
+      image: confluentinc/cp-zookeeper:latest
+      networks:
+        - kafka-network
+      environment:
+        - ZOOKEEPER_CLIENT_PORT=2181
+        - ZOOKEEPER_TICK_TIME=2000    
+      ports:
+        - "2181:2181"
+      healthcheck:
+        test: [ "CMD", "nc", "-z", "localhost", "2181" ]
+        interval: 30s                      
+        timeout: 10s        
+        retries: 5  
   
   kafka:
     image: confluentinc/cp-kafka:latest
+    networks:
+      - kafka-network
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
-      - 29092:29092
+      - "29092:29092"                    
     environment:
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1  
+      - KAFKA_BROKER_ID=1               
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:29092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1    
+    healthcheck:
+      test: [ "CMD", "kafka-topics", "--bootstrap-server", "localhost:29092", "--list" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  
+  init-kafka:
+    build:
+      context: ./config/kafka-init
+      dockerfile: Dockerfile
+    networks:
+      - kafka-network
+    depends_on:
+      kafka:
+        condition: service_healthy 
 
   elasticsearch:
     image: elasticsearch:8.15.3
@@ -82,4 +120,8 @@ services:
   
 networks:
   elastic-network:
+    driver: bridge
+  kafka-network:
+    driver: bridge
+  fastapi-network:
     driver: bridge

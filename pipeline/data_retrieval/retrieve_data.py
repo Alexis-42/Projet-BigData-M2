@@ -74,7 +74,7 @@ def find_and_send_repos():
         repo = get_repos()
     for r in repo:
         print(f"Envoi du repo {r['name']} à Kafka")
-        produce_messages(json.dumps(repo, indent=4), 'add_to_es')
+        produce_messages(json.dumps(r, indent=4), 'add_to_es')
 
 if __name__ == "__main__":
     print("Lancement du programme de récupération des dépôts ...")

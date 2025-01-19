@@ -17,13 +17,22 @@ services:
 
   pipeline-data-retrieval:
     build:
-      context: ./pipeline/data-retrieval
+      context: ./pipeline/data_retrieval
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BROKER_URL: kafka:29092
+    env_file:
+      - .env
+
+  pipeline-data-formatting:
+    build:
+      context: ./pipeline/data_formatting
     depends_on:
       - kafka
       - fastapi
     environment:
-      KAFKA_BROKER_URL: kafka:9092
-      
+      KAFKA_BROKER_URL: kafka:29092
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.4
@@ -34,16 +43,17 @@ services:
       - 22181:2181
   
   kafka:
-    image: confluentinc/cp-kafka:7.4.4
+    image: confluentinc/cp-kafka:latest
     depends_on:
       - zookeeper
     ports:
       - 29092:29092
     environment:
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1  
 

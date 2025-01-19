@@ -1,7 +1,7 @@
 kafka-python
 pyspark
-pymongo
 pandas
+schedule
 requests
 numpy
 python-dotenv

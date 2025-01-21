@@ -49,6 +49,9 @@ function appendMessage(text, className) {
 function createMessageContainer(className) {
     let div = document.createElement('div');
     div.classList.add('message', className);
+    if (className === 'bot-message') {
+        div.classList.add('fade-in');
+    }
     document.getElementById('chatArea').appendChild(div);
     return div;
 }

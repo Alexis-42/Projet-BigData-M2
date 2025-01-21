@@ -58,3 +58,16 @@ body, html {
     background-color: #e5e5ea;
     align-self: flex-start;
 }
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}

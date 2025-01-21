@@ -2,6 +2,7 @@ from typing import Optional, List
 from fastapi import FastAPI, HTTPException
 from es_connector import ES_connector
 from models import Repo
+import time
 import uvicorn
 
 app = FastAPI()
@@ -61,10 +62,10 @@ def store_data(data: dict, index_name: Optional[str] = default_index_name) -> di
     This endpoint calls your custom LLM.
 """
 @app.post("/call_llm/")
-def call_llm(prompt: str) -> dict:
+async def call_llm(prompt: str) -> dict:
     try:
         # Replace this with the actual call to your LLM
-        response = your_llm_function(prompt)
+        response = await your_llm_function(prompt)
         return {
             "message": "LLM response generated successfully",
             "response": response
@@ -72,9 +73,10 @@ def call_llm(prompt: str) -> dict:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate LLM response: {str(e)}")
 
-def your_llm_function(prompt: str) -> str:
+async def your_llm_function(prompt: str) -> str:
     # Implement the logic to call your LLM here
     # For example, you might load a model and generate a response based on the prompt
+    time.sleep(2)
     return "This is a response from your custom LLM."
    
 if __name__ == "__main__":

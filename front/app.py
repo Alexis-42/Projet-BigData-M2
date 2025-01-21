@@ -40,7 +40,7 @@ def chat():
 
 def call_custom_llm(prompt: str) -> str:
     try:
-        response = requests.post(fastapi_llm_url, json={"prompt": prompt})
+        response = requests.post(fastapi_llm_url+"?prompt="+prompt)
         response.raise_for_status()
         return response.json().get("response", "")
     except requests.exceptions.RequestException as e:

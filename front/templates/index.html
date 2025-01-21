@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Local Chat Interface</title>
-    <!-- Link to the external CSS file -->
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/main.css') }}">
 </head>
 <body>
@@ -14,12 +13,11 @@
         <!-- Messages will be dynamically inserted here -->
     </div>
     <div class="input-container">
-        <input type="text" id="userInput" placeholder="Type your message here...">
+        <input type="text" id="userInput" placeholder="Type your message here..." onkeypress="if(event.keyCode == 13) sendChat()">
         <button onclick="sendChat()">Send</button>
     </div>
 </div>
 
-<!-- Link to the external JavaScript file -->
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
 </body>

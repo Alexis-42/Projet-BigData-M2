@@ -1,5 +1,6 @@
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from es_connector import ES_connector
 from models import Repo
 import time
@@ -62,22 +63,31 @@ def store_data(data: dict, index_name: Optional[str] = default_index_name) -> di
     This endpoint calls your custom LLM.
 """
 @app.post("/call_llm/")
-async def call_llm(prompt: str) -> dict:
+def call_llm(prompt: str):
     try:
-        # Replace this with the actual call to your LLM
-        response = await your_llm_function(prompt)
-        return {
-            "message": "LLM response generated successfully",
-            "response": response
-        }
+        return StreamingResponse(your_llm_function(prompt), media_type="text/event-stream")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate LLM response: {str(e)}")
 
-async def your_llm_function(prompt: str) -> str:
-    # Implement the logic to call your LLM here
-    # For example, you might load a model and generate a response based on the prompt
-    time.sleep(2)
-    return "This is a response from your custom LLM."
+def your_llm_function(prompt: str):
+    response = ["hello ", "i am a custom LLM ", "i am generating text", " this is the last part of the response"]
+    try:
+        for i in range(len(response)):
+            time.sleep(1)
+            yield response[i]
+        yield f"/EOR/"
+    except GeneratorExit:
+        print("Client disconnected")
+   
+@app.get("/llm_list")
+def llm_list():
+    return {
+        "llms": [
+            {"id": "llm1", "name": "LLM 1"},
+            {"id": "llm2", "name": "LLM 2"},
+            {"id": "llm3", "name": "LLM 3"}
+        ]
+    }
    
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

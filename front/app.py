@@ -38,6 +38,16 @@ def chat():
 
     return Response(stream_with_context(generate()), content_type='text/plain')
 
+@app.route('/get_llm_list', methods=['GET'])
+def get_llm_list():
+    try:
+        response = requests.get("http://fastapi:8000/llm_list")
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to retrieve LLM list: {str(e)}"}, 500
+
+
 def call_custom_llm(prompt: str) -> str:
     try:
         response = requests.post(fastapi_llm_url+"?prompt="+prompt)

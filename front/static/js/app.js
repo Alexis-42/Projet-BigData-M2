@@ -39,6 +39,40 @@ async function sendChat() {
     }
 }
 
+async function loadLLMOptions() {
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const llmSelector = document.getElementById('llmSelector');
+
+    // Show loading indicator
+    loadingIndicator.style.display = 'block';
+
+    if (llmSelector.innerHTML !== ''){
+        try {
+            const response = await fetch('/get_llm_list');
+            if (!response.ok) {
+                throw new Error("Failed to fetch LLM list");
+            }
+            const data = await response.json();
+
+            // Clear existing options
+            llmSelector.innerHTML = '';
+
+            // Add new options from the API
+            data.llms.forEach(llm => {
+                const option = document.createElement('option');
+                option.value = llm.id;
+                option.textContent = llm.name;
+                llmSelector.appendChild(option);
+            });
+        } catch (error) {
+            console.error("Error loading LLM options:", error);
+        } finally {
+            // Hide loading indicator
+            loadingIndicator.style.display = 'none';
+        }
+    }
+}
+
 function appendMessage(text, className) {
     let messageContainer = createMessageContainer(className);
     messageContainer.innerHTML = text.replace(/\n/g, '<br>'); // Replace newlines with <br>

@@ -26,7 +26,6 @@ def chat():
     
     def generate():
         try:
-            # Appel direct au flux de la FastAPI
             with requests.post(
                 fastapi_llm_url,
                 params={"prompt": user_message},

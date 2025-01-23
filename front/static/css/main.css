@@ -91,7 +91,6 @@ body, html {
     word-wrap: break-word;
     font-size: 14px;
     line-height: 1.5;
-    animation: typing 0.5s steps(20, end);
 }
 
 .user-message {
@@ -106,6 +105,8 @@ body, html {
     align-self: flex-end;
     border: 1px solid #333;
     color: #e0e0e0;
+    padding-bottom: 10px;
+    animation: typing 0.5s steps(20, end);
 }
 
 @keyframes fadeIn {
@@ -317,11 +318,11 @@ body, html {
 }
 
 .bot-avatar {
-    width: 32px;
-    height: 32px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: #007bff;
-    margin-right: 12px;
+    margin-bottom: 16px;
     position: relative;
     flex-shrink: 0;
     animation: pulse 2s infinite;

@@ -23,14 +23,24 @@ async function sendChat() {
 
         // Create a container for the bot's message
         let botMessageContainer = createMessageContainer('bot-message');
+        let buffer = [];
+        const bufferSize = 3;
 
         while (true) {
             const { value, done } = await reader.read();
             if (done) break;
-            let chunk = decoder.decode(value, { stream: true });
-            // Replace newline characters with HTML <br> tags
-            chunk = chunk.replace(/\n/g, '<br>');
-            botMessageContainer.innerHTML += chunk;
+            let chunk = decoder.decode(value);
+            buffer.push(chunk);
+            
+            if (buffer.length >= bufferSize) {
+                botMessageContainer.innerHTML += buffer.join('');
+                buffer = [];
+                // Forcer le recalcul du layout pour le défilement
+                void botMessageContainer.offsetHeight;
+            }
+        }
+        if (buffer.length > 0) {
+            botMessageContainer.innerHTML += buffer.join('');
         }
         // Scroll the bot's message container into view
         botMessageContainer.scrollIntoView({ behavior: 'smooth' });

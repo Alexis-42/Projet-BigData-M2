@@ -23,18 +23,21 @@ def index():
 @app.route('/chat', methods=['POST'])
 def chat():
     user_message = request.json.get('message')
-    response = call_custom_llm(user_message)
-    buffer = []
-    buffer_size = 3
-
+    
     def generate():
-        for token in response:
-            buffer.append(token)
-            if len(buffer) >= buffer_size:
-                yield ''.join(buffer)
-                buffer.clear()
-        if buffer:
-            yield ''.join(buffer)
+        try:
+            # Appel direct au flux de la FastAPI
+            with requests.post(
+                fastapi_llm_url,
+                params={"prompt": user_message},
+                stream=True
+            ) as response:
+                response.raise_for_status()
+                for chunk in response.iter_content(chunk_size=None):
+                    if chunk:
+                        yield chunk.decode()
+        except Exception as e:
+            yield f"Erreur : {str(e)}"
 
     return Response(stream_with_context(generate()), content_type='text/plain')
 

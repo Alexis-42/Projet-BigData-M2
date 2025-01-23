@@ -131,7 +131,9 @@ function createMessageContainer(className) {
     let div = document.createElement('div');
     div.classList.add('message', className);
     if (className === 'bot-message') {
-        div.classList.add('fade-in');
+        const avatar = document.createElement('div');
+        avatar.className = 'bot-avatar';
+        div.prepend(avatar);
     }
     document.getElementById('chatArea').appendChild(div);
     return div;

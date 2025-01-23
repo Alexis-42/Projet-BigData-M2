@@ -144,38 +144,87 @@ body, html {
     margin: 0 auto;
     display: flex;
     justify-content: center;
+    align-items: center;
     padding: 10px;
-    position: center;
-    top: 0px;
+    position: relative;
+    top: 0;
     z-index: 10;
     background-color: #1e1e1e;
     border-bottom: 1px solid #333;
-    transition: top 0.5s ease-in-out;
-    height: 50px;
+    height: 60px;
     border-radius: 0 0 8px 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    animation: slideDown 0.5s ease-out;
 }
 
-.llm-selector-container.open {
-    top: 60px;
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 .llm-selector {
-    padding: 8px;
+    padding: 10px 16px;
+    font-size: 16px;
+    color: #e0e0e0;
+    background-color: #2c2c2c;
+    border: none;
+    border-radius: 6px;
+    outline: none;
+    transition: transform 0.2s ease-in-out;
+    cursor: pointer;
+    position: relative;
+}
+
+.llm-selector::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid #e0e0e0;
+    transform: translateY(-50%) rotate(0deg);
+    transition: transform 0.3s ease;
+}
+
+.llm-selector-container.open .llm-selector::after {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.llm-selector-option {
     font-size: 14px;
     color: #e0e0e0;
     background-color: #2c2c2c;
-    border: 1px solid #444;
-    border-radius: 4px;
-    outline: none;
-    transition: border-color 0.3s, box-shadow 0.3s;
+    padding: 8px 12px;
+    border-bottom: 1px solid #333;
+    cursor: pointer;
+    transition: background-color 0.3s;
 }
 
-.llm-selector:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 3px rgba(0, 123, 255, 0.5);
+.llm-selector-option:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+/* Loading indicator animations */
+#loadingIndicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
 }
 
 #loadingIndicator img {
+    width: 24px;
+    height: 24px;
     animation: spin 1s linear infinite;
 }
 
@@ -186,4 +235,83 @@ body, html {
     to {
         transform: rotate(360deg);
     }
+}
+
+.custom-dropdown {
+    position: relative;
+    width: 240px;
+    z-index: 1000;
+}
+
+.dropdown-toggle {
+    width: 100%;
+    padding: 12px 16px;
+    background: #2c2c2c;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #e0e0e0;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.dropdown-toggle:hover {
+    background: #363636;
+    border-color: #555;
+}
+
+.dropdown-arrow {
+    width: 18px;
+    height: 18px;
+    fill: #e0e0e0;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.custom-dropdown.open .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: #2c2c2c;
+    border-radius: 6px;
+    padding: 8px 0;
+    margin: 0;
+    list-style: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #444;
+}
+
+.custom-dropdown.open .dropdown-menu {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+}
+
+.dropdown-menu li {
+    padding: 12px 16px;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dropdown-menu li:hover {
+    background: #007bff;
+    color: white;
+}
+
+.dropdown-menu li:active {
+    background: #0062cc;
 }

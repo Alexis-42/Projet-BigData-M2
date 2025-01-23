@@ -7,10 +7,8 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/main.css') }}">
 </head>
 <body onLoad="loadLLMOptions()">
-    <!-- LLM Selection dropdown at the top center -->
     <div class="llm-selector-container">
-        <select class="llm-selector" id="llmSelector">
-        </select>
+        <select class="llm-selector" id="llmSelector" style="display: none;"></select>
     </div>
     <div class="chat-container" style="margin-top: 60px;">
         <div id="loadingIndicator" style="display: none; text-align: center; margin-top: 10px;">

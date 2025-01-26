@@ -52,7 +52,7 @@ def process_message(message):
     
     message["readme"] = format_readme(message["readme"])
     
-    url_store = "http://fastapi:8000/store/"
+    url_store = "http://model:8000/store/"
     response = requests.post(url_store, json=message)
     if response.status_code == 200:
         print(f"Document {message['name']} indexed successfully")

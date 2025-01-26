@@ -1,7 +1,17 @@
 services:
-  fastapi:
+  front:
     build:
-      context: ./fastapi
+      context: ./front
+    ports:
+      - "5000:5000"
+    networks:
+      - fastapi-network
+    depends_on:
+      - model
+
+  model:
+    build:
+      context: ./model
     ports:
       - "8000:8000"
     depends_on:
@@ -9,12 +19,6 @@ services:
     networks:
       - elastic-network
       - fastapi-network
-
-  model:
-    build:
-      context: ./model
-    depends_on:
-      - fastapi
 
   pipeline-data-retrieval:
     build:
@@ -91,6 +95,8 @@ services:
       ELASTIC_PASSWORD: ${ELASTICSEARCH_PASSWORD}
     networks:
       - elastic-network
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
       
   kibana:
     image: kibana:8.15.3
@@ -103,6 +109,8 @@ services:
       - 5601:5601
     networks:
     - elastic-network
+    volumes:
+      - kibana-data:/usr/share/kibana/data
   
 networks:
   elastic-network:
@@ -111,3 +119,9 @@ networks:
     driver: bridge
   fastapi-network:
     driver: bridge
+  
+volumes:
+  elasticsearch-data:
+    driver: local
+  kibana-data:
+    driver: local

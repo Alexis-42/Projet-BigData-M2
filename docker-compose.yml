@@ -7,11 +7,11 @@ services:
     networks:
       - fastapi-network
     depends_on:
-      - fastapi
+      - model
 
-  fastapi:
+  model:
     build:
-      context: ./fastapi
+      context: ./model
     ports:
       - "8000:8000"
     depends_on:
@@ -19,12 +19,6 @@ services:
     networks:
       - elastic-network
       - fastapi-network
-
-  model:
-    build:
-      context: ./model
-    depends_on:
-      - fastapi
 
   pipeline-data-retrieval:
     build:

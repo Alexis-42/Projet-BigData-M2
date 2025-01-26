@@ -14,7 +14,7 @@ CORS(app)  # Enable CORS for all routes
 # Load environment variables
 load_dotenv()
 
-fastapi_llm_url = "http://fastapi:8000/call_llm/"
+fastapi_llm_url = "http://model:8000/call_llm/"
 
 @app.route('/')
 def index():
@@ -43,7 +43,7 @@ def chat():
 @app.route('/get_llm_list', methods=['GET'])
 def get_llm_list():
     try:
-        response = requests.get("http://fastapi:8000/llm_list")
+        response = requests.get("http://model:8000/llm_list")
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, Response, stream_with_context
+from flask import Flask, render_template, request, Response, stream_with_context, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -60,6 +60,24 @@ def call_custom_llm(prompt: str) -> str:
 
 def open_browser():
     webbrowser.open_new('http://127.0.0.1:5000/')
+    
+@app.route('/get_readme_files', methods=['GET'])
+def get_readme_files():
+    try:
+        # Example: Fetch README files from a directory
+        readme_files = []
+        readme_dir = os.path.join(os.path.dirname(__file__), 'readme_files')
+        for filename in os.listdir(readme_dir):
+            if filename.endswith('.md'):
+                with open(os.path.join(readme_dir, filename), 'r') as file:
+                    content = file.read()
+                    readme_files.append({
+                        'name': filename,
+                        'content': content
+                    })
+        return jsonify({'readmeFiles': readme_files})
+    except Exception as e:
+        return jsonify({'error': f"Failed to retrieve README files: {str(e)}"}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

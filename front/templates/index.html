@@ -1,0 +1,55 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Chat Interface</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
+</head>
+<body>  
+    <script type="module"  src="{{ url_for('static', filename='js/app.js') }}"></script>  
+    <div class="llm-selector-container">
+        <select class="llm-selector" id="llmSelector" style="display: none;"></select>
+    </div>
+    <div class="main-container">
+        <div class="params-container" id="paramsContainer">
+            <div class="params-header">
+                <h3>⚙️ RAG Parameters</h3>
+            </div>
+            <div class="params-content">
+                <div class="param-group">
+                    <label for="docCount">Number of Documents</label>
+                    <input type="number" id="docCount" min="1" max="10" value="3">
+                </div>
+                <div class="param-group">
+                    <label for="similarity">Similarity Threshold</label>
+                    <input type="range" id="similarity" min="0" max="1" step="0.1" value="0.7">
+                    <span id="similarityValue">0.7</span>
+                </div>
+                <button id="applyParams" class="param-button">Apply Parameters</button>
+            </div>
+        </div>
+        <div class="chat-container">
+            <div id="loadingIndicator" style="display: none; text-align: center; margin-top: 10px;">
+                <img src="https://i.gifer.com/ZKZg.gif" alt="Loading..." style="width: 50px; height: 50px;">
+            </div>
+            <div class="chat-area" id="chatArea">
+                <!-- Messages will be dynamically inserted here -->
+            </div>
+            <div class="input-container">
+                <input type="text" id="userInput" placeholder="Type your message here..." onkeypress="if(event.keyCode == 13) sendChat()">
+                <button id="sendButton">Send</button>
+            </div>
+        </div>
+        <div class="readme-container" id="readmeContainer">
+            <div class="readme-header">
+                <h3>📚 README RAG</h3>
+            </div>
+            <div class="readme-list" id="readmeList">
+                <!-- Readme content will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+</body>
+</html>

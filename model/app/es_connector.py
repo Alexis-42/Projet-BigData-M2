@@ -15,8 +15,13 @@ class ES_connector:
         
     def index_data(self, index_name: str, data: dict) -> dict:
         try:
+            document_id = data.pop("html_url")
             # Index the document in Elasticsearch
-            response = self.es_client.index(index=index_name, document=data)
+            response = self.es_client.index(
+                index=index_name,
+                id=document_id,
+                document=data
+            )
             return response
         except Exception as e:
             # Handle other errors

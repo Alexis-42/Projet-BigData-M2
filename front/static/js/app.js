@@ -36,6 +36,7 @@ function updateParams() {
 
 function applyRAGParams() {
     console.log('Paramètres RAG mis à jour:', ragParams);
+    updateParams()
 }
 
 let ragParams = {
@@ -66,9 +67,13 @@ async function sendChat() {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        const bufferSize = 3;
+        let inReadmeSection = false;
         const botMessageContainer = createMessageContainer('bot-message');
         let buffer = [];
-        const bufferSize = 3;
+        let readmeBuffer = [];
+        let readmeState = 'OUTSIDE'; // 'OUTSIDE', 'START_FOUND', 'INSIDE'
+        let partialMarker = '';
 
         while (true) {
             const { value, done } = await reader.read();
@@ -76,8 +81,76 @@ async function sendChat() {
             
             const chunk = decoder.decode(value);
             buffer.push(chunk);
+            let content = buffer.join('');
             
-            if (buffer.length >= bufferSize) {
+            // Gestion des marqueurs découpés
+            while (true) {
+                if (readmeState === 'OUTSIDE') {
+                    const startIndex = content.indexOf('### README START ###');
+                    if (startIndex > -1) {
+                        // Ajouter tout le contenu avant le marqueur
+                        botMessageContainer.innerHTML += content.substring(0, startIndex);
+                        
+                        // Initialiser le buffer README
+                        readmeState = 'INSIDE';
+                        content = content.substring(startIndex + '### README START ###'.length);
+                        buffer = [content];
+                        break;
+                    } else {
+                        // Vérifier si le chunk se termine par un début partiel de marqueur
+                        const partial = content.slice(-'### README START ###'.length);
+                        const markerIndex = '### README START ###'.indexOf(partial);
+                        if (markerIndex > 0) {
+                            partialMarker = partial;
+                            content = content.slice(0, -partial.length);
+                            readmeState = 'START_FOUND';
+                        }
+                        
+                        // Ajouter tout le contenu normal
+                        botMessageContainer.innerHTML += content;
+                        buffer = [];
+                        break;
+                    }
+                }
+                else if (readmeState === 'START_FOUND') {
+                    content = partialMarker + content;
+                    partialMarker = '';
+                    readmeState = 'OUTSIDE';
+                    continue;
+                }
+                else if (readmeState === 'INSIDE') {
+                    const endIndex = content.indexOf('### README END ###');
+                    if (endIndex > -1) {
+                        // Ajouter le contenu README final
+                        readmeBuffer.push(content.substring(0, endIndex));
+                        displayReadmeContent(readmeBuffer.join(''));
+                        
+                        // Reprendre le traitement normal
+                        readmeState = 'OUTSIDE';
+                        content = content.substring(endIndex + '### README END ###'.length);
+                        buffer = [content];
+                        readmeBuffer = [];
+                        continue;
+                    } else {
+                        // Vérifier la fin partielle du marqueur
+                        const partialEnd = content.slice(-'### README END ###'.length);
+                        const markerIndex = '### README END ###'.indexOf(partialEnd);
+                        if (markerIndex > 0) {
+                            readmeBuffer.push(content.slice(0, -partialEnd.length));
+                            partialMarker = partialEnd;
+                            buffer = [];
+                            break;
+                        } else {
+                            readmeBuffer.push(content);
+                            buffer = [];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Gestion du bufferSize pour le contenu normal
+            if (readmeState === 'OUTSIDE' && buffer.length >= bufferSize) {
                 botMessageContainer.innerHTML += buffer.join('');
                 buffer = [];
                 void botMessageContainer.offsetHeight;
@@ -90,9 +163,12 @@ async function sendChat() {
 
         document.querySelector('.llm-selector-container').style.display = 'flex';
 
-        const readmeContent = extractReadmeContent(botMessageContainer.textContent);
-        if (readmeContent) displayReadmeContent(readmeContent);
-        
+        const { readmeContent, remainingText } = extractReadmeContent(botMessageContainer.textContent);
+        if (readmeContent) {
+            displayReadmeContent(readmeContent);
+            botMessageContainer.textContent = remainingText.trim();
+        }
+
         botMessageContainer.scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
         console.error('Error:', error);
@@ -107,9 +183,16 @@ function extractReadmeContent(responseText) {
     const endIndex = responseText.indexOf(readmeEndMarker);
 
     if (startIndex !== -1 && endIndex !== -1) {
-        return responseText.substring(startIndex + readmeStartMarker.length, endIndex).trim();
+        const readmeContent = responseText.substring(
+            startIndex + readmeStartMarker.length, 
+            endIndex
+        ).trim();
+        // Retirer la section README du texte original
+        const remainingText = responseText.substring(0, startIndex) + 
+                              responseText.substring(endIndex + readmeEndMarker.length);
+        return { readmeContent, remainingText };
     }
-    return "";
+    return { readmeContent: "", remainingText: responseText };
 }
 
 function displayReadmeContent(content, nom_repo="README") {
@@ -195,7 +278,7 @@ function createCustomDropdown(nativeSelect) {
 async function loadLLMOptions() {
     const loadingIndicator = document.getElementById('loadingIndicator');
     const llmSelector = document.getElementById('llmSelector');
-    const selectorContainer = document.querySelector('.llm-selector-container');
+    const selectorContainer = document.querySelector('llm-selector-container');
 
     loadingIndicator.style.display = 'block';
 

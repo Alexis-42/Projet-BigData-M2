@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from es_connector import ES_connector
 from models import Repo
+from readme_utils import remove_all_tags
 import time
 import uvicorn
 
@@ -35,7 +36,13 @@ def search(q: str, number_of_result: Optional[int] = 1):
     if(raw_results is None or raw_results["hits"]["total"]["value"] == 0):
         return []
     else:
-        repos = [Repo(**hit["_source"]) for hit in raw_results["hits"]["hits"]]
+        repos = [
+            Repo(
+                id=hit["_id"],
+                **hit["_source"]
+            )
+            for hit in raw_results["hits"]["hits"]
+        ]
         return repos
 
 
@@ -47,6 +54,8 @@ def search(q: str, number_of_result: Optional[int] = 1):
 def store_data(data: dict, index_name: Optional[str] = default_index_name) -> dict:
     required_fields = ["name", "description", "readme", "html_url"]
     missing_fields = [field for field in required_fields if field not in data]
+    if "readme" in data:
+        data["cleaned_readme"] = remove_all_tags(data["readme"])
     if missing_fields:
         raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
 

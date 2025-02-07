@@ -7,7 +7,8 @@ import random
 import base64
 import sys
 import os
-from spark_kafka import produce_messages, add_to_es_topic
+from spark_kafka import produce_messages
+from langdetect import detect_langs, LangDetectException
 
 load_dotenv("../../.env")
 
@@ -15,14 +16,14 @@ CLE_API_GITHUB = os.getenv("CLE_API_GITHUB")
 HEADERS = {"Authorization": f"token {CLE_API_GITHUB}"}
 
 def get_repos():
-    # Recherche générale avec le mot "a" (ou autre lettre)
     url = "https://api.github.com/search/repositories"
+    random_letter = chr(random.randint(97, 122))  # Générer une lettre aléatoire entre 'a' et 'z'
     params = {
-        "q": "a", # recherche avec la lettre "a"
+        "q": random_letter,  # recherche avec une lettre aléatoire
         "order": "desc",
-        "per_page": 5, 
+        "per_page": 10, 
         "page": random.randint(1, 100), # page random entre 1 et 100
-        }  
+    }
     response = requests.get(url, headers=HEADERS, params=params)
     data_repos = []
     
@@ -31,11 +32,11 @@ def get_repos():
         repos = data.get("items", [])
         if repos:
             for repo in repos:
-                if(fetch_and_check_readme(repo)):
+                if fetch_and_check_readme(repo):
                     data_repos.append({
                         "name": repo["name"],
                         "description": repo["description"],
-                        "readme" : repo["readme_content"],
+                        "readme": repo["readme_content"],
                         "html_url": repo["html_url"]
                     })
             return data_repos
@@ -48,22 +49,49 @@ def get_repos():
             print("Taux limite atteint. Attente de 10 secondes pour une autre tentative ...")
             time.sleep(2)
             return get_repos()
-        else :
+        else:
             return f"Erreur: {response.status_code}, {response.text}"
 
 def fetch_and_check_readme(repo):
     readme_url = repo["url"] + "/readme"
     response = requests.get(readme_url, headers=HEADERS)
-    readme_is_present = False
+    readme_is_valid = False
     if response.status_code == 200:
         data = response.json()
         if "content" in data:
             # Décoder le contenu encodé en base64
             content = base64.b64decode(data["content"]).decode("utf-8").strip()
-            if content:  # Vérifier que le README n'est pas vide
-                repo["readme_content"] = content
-                readme_is_present = True
-    return readme_is_present
+            if (content and len(content) >= 300 and repo["description"]):
+                try:
+                    lang_prob = get_english_probability(content)
+                    # Détecter la langue du contenu
+                    if lang_prob >= 0.85:
+                        repo["readme_content"] = content
+                        readme_is_valid = True
+                except LangDetectException:
+                    # En cas d'erreur de détection de langue, ignorer ce README
+                    pass
+                else:
+                    readme_is_valid = False
+    return readme_is_valid
+
+def get_english_probability(text):
+    try:
+        # Détecter les langues probables avec leurs scores
+        lang_probs = detect_langs(text)
+        
+        # Parcourir les résultats pour trouver l'anglais
+        for lang_prob in lang_probs:
+            # Extraire la langue et la probabilité
+            lang, prob = str(lang_prob).split(':')
+            if lang == 'en':
+                return float(prob)  # Retourner la probabilité de l'anglais
+        
+        # Si l'anglais n'est pas trouvé, retourner 0
+        return 0.0
+    except:
+        # En cas d'erreur (texte trop court, etc.), retourner 0
+        return 0.0
 
 def find_and_send_repos():
     print("Recherche de dépôts ...")

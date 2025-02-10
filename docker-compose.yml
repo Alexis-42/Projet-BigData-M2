@@ -11,7 +11,8 @@ services:
 
   model:
     build:
-      context: ./model
+      context: .
+      dockerfile: ./model/Dockerfile
     ports:
       - "8000:8000"
     depends_on:
@@ -22,7 +23,8 @@ services:
 
   pipeline-data-retrieval:
     build:
-      context: ./pipeline/data_retrieval
+      context: .
+      dockerfile: ./pipeline/data_retrieval/Dockerfile
     depends_on:
       kafka:
         condition: service_healthy

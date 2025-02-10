@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from sentence_transformers import SentenceTransformer
 from es_connector import ES_connector
 from models import Repo
-from readme_utils import remove_all_tags
+from common.text_utils.cleaning import remove_all_tags
 import time
 import uvicorn
 

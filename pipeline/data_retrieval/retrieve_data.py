@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from readme_utils import remove_all_tags
+from common.text_utils.cleaning import remove_all_tags
 import schedule
 import time
 import json

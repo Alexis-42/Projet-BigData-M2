@@ -159,7 +159,7 @@ def prepare_input_for_LLM(user_query,k=5):
         f"Generate a README based on the following topic: {user_query}.\n\n"
         f"Here is an example of a well-structured README on which you can base the structure of your response:\n\n{EXAMPLE_README}\n\n"
         f"Here are some related README files:\n\n" +
-        "\n\n".join([f"Repository: {repo['name']}\nREADME:\n{repo['readme']}" for repo in top_readmes]) + "\n\n"
+        "\n\n".join([f"Repository: {repo.name}\nREADME:\n{repo.readme}" for repo in top_readmes]) + "\n\n"
         f"Please generate a complete and formatted README in English for my project based on the example for the structure and followed by the related README files, ready to be copied into a README.md file.\n"
         f"Do not include this prompt in the generated README."
         f"Replace by \\n the line breaks in the generated README."

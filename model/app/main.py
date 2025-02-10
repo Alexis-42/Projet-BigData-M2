@@ -9,10 +9,10 @@ import os
 from dotenv import load_dotenv
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-large")
-model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-large")
+# Load model once at startup
+tokenizer = AutoTokenizer.from_pretrained("./flan-t5-large")
+model = AutoModelForSeq2SeqLM.from_pretrained("./flan-t5-large")
 
-load_dotenv()
 
 CLE_API_GITHUB = os.getenv('CLE_API_GITHUB')
 
@@ -72,35 +72,49 @@ def store_data(data: dict, index_name: Optional[str] = default_index_name) -> di
 """
     This endpoint calls your custom LLM.
 """
+import requests
+
 @app.post("/call_llm/")
 def call_llm(prompt: str):
-
     try:
         return StreamingResponse(generate_readme_with_LLM(prompt), media_type="text/event-stream")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate LLM response: {str(e)}")
 
-def generate_readme_with_LLM(input_text: str, model_name: str = "google/flan-t5-large"):
-    """
-    Generate a README using the given LLM.
-    
-    Args:
-        input_text (str): LLM input string.
-        model_name (str): LLM model name to use. Defaults to "google/flan-t5-large".
-    
-    Returns:
-        str: generated README.
-    """
 
-        
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-    input_text = prepare_input_for_LLM(input_text)
+import traceback
+from fastapi import HTTPException
 
-    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=500)
-    outputs = model.generate(inputs["input_ids"], max_length=1024, num_beams=5, early_stopping=True)
-    generated_readme = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return [generated_readme]
+def generate_readme_with_LLM(prompt: str, model_name: str = "./flan-t5-large"):
+    try:
+        input_text = prepare_input_for_LLM(prompt)
+        inputs = tokenizer(input_text, return_tensors="pt", max_length=512, truncation=True)
+
+        output_sequences = model.generate(
+            input_ids=inputs['input_ids'],
+            max_length=512,
+            num_return_sequences=1,
+            no_repeat_ngram_size=2,
+            do_sample=True,
+            top_k=50,
+            top_p=0.95,
+            temperature=0.7,
+            early_stopping=True
+        )
+
+        for token_ids in output_sequences:
+            token = tokenizer.decode(token_ids, skip_special_tokens=True)
+            yield token
+            time.sleep(0.1)  # Simuler un délai pour le streaming
+
+    except GeneratorExit:
+        print("Client disconnected")
+    except Exception as e:
+        print(f"Exception occurred: {str(e)}")  # Log de l'exception
+        print("Traceback of the exception:")
+        traceback.print_exc()  # Affiche un traceback détaillé
+        raise HTTPException(status_code=500, detail=f"Failed generate LLM in generate LLM response: {str(e)}")
+
 
 # Exemple structuré de README en Markdown
 EXAMPLE_README = """

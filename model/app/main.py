@@ -68,8 +68,16 @@ def store_data(data: dict, index_name: Optional[str] = default_index_name) -> di
     required_fields = ["name", "description", "readme", "html_url"]
     missing_fields = [field for field in required_fields if field not in data]
     if "readme" in data:
+        if not isinstance(data["readme"], str):
+            raise HTTPException(status_code=400, detail="Readme must be a string")
+        if len(data["readme"]) == 0:
+            raise HTTPException(status_code=400, detail="Readme cannot be empty")
+    
         data["cleaned_readme"] = remove_all_tags(data["readme"])
-        data["embedding"] = model.encode(data["cleaned_readme"]).tolist()
+        try:
+            data["embedding"] = model.encode(data["cleaned_readme"]).tolist()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to generate embedding: {e}")
     if missing_fields:
         raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
 

@@ -6,14 +6,10 @@ import json
 import requests
 import random
 import base64
-import sys
 import os
+import string
 from spark_kafka import produce_messages
 from langdetect import detect_langs, LangDetectException
-import random
-import string
-
-
 load_dotenv("../../.env")
 
 CLE_API_GITHUB = os.getenv("CLE_API_GITHUB")
@@ -63,8 +59,12 @@ def fetch_and_check_readme(repo):
     if response.status_code == 200:
         data = response.json()
         if "content" in data:
-            # Décoder le contenu encodé en base64
-            content = base64.b64decode(data["content"]).decode("utf-8").strip()
+            try:
+                content = base64.b64decode(data["content"]).decode("utf-8").strip()
+            except (base64.binascii.Error, UnicodeDecodeError) as e:
+                print(f"Error decoding content: {e}")
+                return False
+
             if (content and len(content) >= 300 and repo["description"]):
                 if has_non_latin_chars(content):
                     return False

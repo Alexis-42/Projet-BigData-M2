@@ -37,9 +37,10 @@ def remove_markdown_tags(text):
     return text
 
 # Function to remove special characters
-def remove_special_car(text):
+def remove_special_chars(text):
     # Remove tabs
-    text = re.sub(r'    ', ' ', text)
+    text = re.sub(r'\t', ' ', text)  # Handle actual tabs
+    text = re.sub(r' {2,}', ' ', text)  # Collapse multiple spaces
     # Remove 2+ successive newlines
     text = re.sub(r'\n{2,}', '\n', text)
     # Remove leading spaces
@@ -48,9 +49,8 @@ def remove_special_car(text):
     text = re.sub(r'[^\w\s]', '', text)
     return text
 
-# Function to remove all tags (HTML, Markdown, special characters)
 def remove_all_tags(text):
     text = remove_html_tags(text)
     text = remove_markdown_tags(text)
-    text = remove_special_car(text)
+    text = remove_special_chars(text)
     return text

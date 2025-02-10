@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+from readme_utils import remove_all_tags
 import schedule
 import time
 import json
@@ -9,6 +10,9 @@ import sys
 import os
 from spark_kafka import produce_messages
 from langdetect import detect_langs, LangDetectException
+import random
+import string
+
 
 load_dotenv("../../.env")
 
@@ -17,7 +21,7 @@ HEADERS = {"Authorization": f"token {CLE_API_GITHUB}"}
 
 def get_repos():
     url = "https://api.github.com/search/repositories"
-    random_letter = chr(random.randint(97, 122))  # Générer une lettre aléatoire entre 'a' et 'z'
+    random_letter = random.choice( string.ascii_lowercase )
     params = {
         "q": random_letter,  # recherche avec une lettre aléatoire
         "order": "desc",
@@ -62,35 +66,36 @@ def fetch_and_check_readme(repo):
             # Décoder le contenu encodé en base64
             content = base64.b64decode(data["content"]).decode("utf-8").strip()
             if (content and len(content) >= 300 and repo["description"]):
+                if has_non_latin_chars(content):
+                    return False
                 try:
                     lang_prob = get_english_probability(content)
-                    # Détecter la langue du contenu
-                    if lang_prob >= 0.85:
+
+                    if lang_prob >= 0.90:
                         repo["readme_content"] = content
                         readme_is_valid = True
                 except LangDetectException:
-                    # En cas d'erreur de détection de langue, ignorer ce README
                     pass
-                else:
-                    readme_is_valid = False
     return readme_is_valid
+
+def has_non_latin_chars(text, threshold=0.4):
+    total = max(len(text), 1)
+    non_latin = sum(1 for c in text if ord(c) > 0x7f)
+    return (non_latin / total) > threshold
 
 def get_english_probability(text):
     try:
-        # Détecter les langues probables avec leurs scores
+        text = remove_all_tags(text)
+        
         lang_probs = detect_langs(text)
+        if not lang_probs:
+            return 0.0
+            
+        top_lang = lang_probs[0]
+        lang, prob = str(top_lang).split(':')
         
-        # Parcourir les résultats pour trouver l'anglais
-        for lang_prob in lang_probs:
-            # Extraire la langue et la probabilité
-            lang, prob = str(lang_prob).split(':')
-            if lang == 'en':
-                return float(prob)  # Retourner la probabilité de l'anglais
-        
-        # Si l'anglais n'est pas trouvé, retourner 0
-        return 0.0
-    except:
-        # En cas d'erreur (texte trop court, etc.), retourner 0
+        return float(prob) if lang == 'en' else 0.0
+    except Exception:
         return 0.0
 
 def find_and_send_repos():

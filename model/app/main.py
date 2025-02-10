@@ -1,6 +1,7 @@
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
+from sentence_transformers import SentenceTransformer
 from es_connector import ES_connector
 from models import Repo
 from readme_utils import remove_all_tags
@@ -10,6 +11,8 @@ import uvicorn
 app = FastAPI()
 
 es = ES_connector()
+
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
 default_index_name = "github_repos_data"
 
@@ -24,22 +27,32 @@ def home():
 """
 @app.get("/search", response_model=List[Repo])
 def search(q: str, number_of_result: Optional[int] = 1):
+    query_vector = model.encode(q)
+
     search_query = {
         "query": {
-            "multi_match": {
-                "query": q,
-                "fields": ["name", "description", "readme"]
+            "script_score": {
+                "query": {"match_all": {}},
+                "script": {
+                    "source": "cosineSimilarity(params.query_vector, 'embedding') + 1.0",
+                    "params": {"query_vector": query_vector.tolist()}
+                }
             }
-        }
+        },
+        "size": number_of_result
     }
+
     raw_results = es.get_data(default_index_name, search_query, number_of_result)
-    if(raw_results is None or raw_results["hits"]["total"]["value"] == 0):
+
+    if raw_results is None or raw_results["hits"]["total"]["value"] == 0:
         return []
     else:
         repos = [
             Repo(
                 id=hit["_id"],
-                **hit["_source"]
+                name=hit["_source"]["name"],
+                description=hit["_source"]["description"],
+                readme=hit["_source"]["readme"]
             )
             for hit in raw_results["hits"]["hits"]
         ]
@@ -56,6 +69,7 @@ def store_data(data: dict, index_name: Optional[str] = default_index_name) -> di
     missing_fields = [field for field in required_fields if field not in data]
     if "readme" in data:
         data["cleaned_readme"] = remove_all_tags(data["readme"])
+        data["embedding"] = model.encode(data["cleaned_readme"]).tolist()
     if missing_fields:
         raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
 

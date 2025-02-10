@@ -81,7 +81,7 @@ services:
       - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1    
     healthcheck:
       test: [ "CMD", "kafka-topics", "--bootstrap-server", "localhost:29092", "--list" ]
-      interval: 30s
+      interval: 10s
       timeout: 10s
       retries: 3
 

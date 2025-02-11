@@ -1,7 +1,8 @@
 services:
   front:
     build:
-      context: ./front
+      context: .
+      dockerfile: ./front/Dockerfile
     ports:
       - "5000:5000"
     networks:
@@ -11,7 +12,8 @@ services:
 
   model:
     build:
-      context: ./model
+      context: .
+      dockerfile: ./model/Dockerfile
     ports:
       - "8000:8000"
     depends_on:
@@ -22,7 +24,8 @@ services:
 
   pipeline-data-retrieval:
     build:
-      context: ./pipeline/data_retrieval
+      context: .
+      dockerfile: ./pipeline/data_retrieval/Dockerfile
     depends_on:
       kafka:
         condition: service_healthy
@@ -37,7 +40,8 @@ services:
 
   pipeline-data-formatting:
     build:
-      context: ./pipeline/data_formatting
+      context: .
+      dockerfile: ./pipeline/data_formatting/Dockerfile
     depends_on:
       kafka:
         condition: service_healthy
@@ -81,7 +85,7 @@ services:
       - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1    
     healthcheck:
       test: [ "CMD", "kafka-topics", "--bootstrap-server", "localhost:29092", "--list" ]
-      interval: 30s
+      interval: 10s
       timeout: 10s
       retries: 3
 

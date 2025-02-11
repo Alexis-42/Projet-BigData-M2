@@ -1,14 +1,10 @@
-name: Docker Compose
+name: Docker Images
 
 on:
   push:
-    branches:
-      - "main"
-      - "dev"
+    branches: [ "main" ]
   pull_request:
-    branches:
-      - "main"
-      - "dev"
+    branches: [ "main" ]
 
 jobs:
 
@@ -18,6 +14,17 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Build the api/model dockerfile
+      run: docker build ./model --file Dockerfile --tag my-image-name:$(date +%s)
 
-    - name: Start Docker Compose
-      run: docker-compose up -d
+    - uses: actions/checkout@v4
+    - name: Build the front image
+      run: docker build ./front --file Dockerfile --tag my-image-name:$(date +%s)
+
+    - uses: actions/checkout@v4
+    - name: Build the dataretrieval image
+      run: docker build ./pipeline/data_retrieval --file Dockerfile --tag my-image-name:$(date +%s)
+
+    - uses: actions/checkout@v4
+    - name: Build the dataformatting image
+      run: docker build ./pipeline/data_formatting --file Dockerfile --tag my-image-name:$(date +%s)

@@ -1,0 +1,31 @@
+name: Docker Images
+
+on:
+  push:
+    branches: 
+    - "main"
+    - "dev"
+  pull_request:
+    branches:
+    - "main"
+    - "dev"
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build the api/model dockerfile
+      run: docker build . --file model/Dockerfile --tag my-image-name:$(date +%s)
+
+    - name: Build the front image
+      run: docker build . --file front/Dockerfile --tag my-image-name:$(date +%s)
+
+    - name: Build the dataretrieval image
+      run: docker build . --file pipeline/data_retrieval/Dockerfile --tag my-image-name:$(date +%s)
+
+    - name: Build the dataformatting image
+      run: docker build . --file pipeline/data_formatting/Dockerfile --tag my-image-name:$(date +%s)

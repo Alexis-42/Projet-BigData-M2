@@ -11,7 +11,7 @@ RUN pip3 install requests
 
 # Copier le code Python dans le conteneur
 WORKDIR /app
-COPY . /app
+COPY ./pipeline/data_formatting /app
 
 # Exécuter votre script Python
 CMD ["python3", "format_data.py"]

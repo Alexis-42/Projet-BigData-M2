@@ -1,14 +1,18 @@
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
+from sentence_transformers import SentenceTransformer
 from es_connector import ES_connector
 from models import Repo
+from common.text_utils.cleaning import remove_all_tags
 import time
 import uvicorn
 
 app = FastAPI()
 
 es = ES_connector()
+
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
 default_index_name = "github_repos_data"
 
@@ -23,19 +27,35 @@ def home():
 """
 @app.get("/search", response_model=List[Repo])
 def search(q: str, number_of_result: Optional[int] = 1):
+    query_vector = model.encode(q)
+
     search_query = {
         "query": {
-            "multi_match": {
-                "query": q,
-                "fields": ["name", "description", "readme"]
+            "script_score": {
+                "query": {"match_all": {}},
+                "script": {
+                    "source": "cosineSimilarity(params.query_vector, 'embedding') + 1.0",
+                    "params": {"query_vector": query_vector.tolist()}
+                }
             }
-        }
+        },
+        "size": number_of_result
     }
+
     raw_results = es.get_data(default_index_name, search_query, number_of_result)
-    if(raw_results is None or raw_results["hits"]["total"]["value"] == 0):
+
+    if raw_results is None or raw_results["hits"]["total"]["value"] == 0:
         return []
     else:
-        repos = [Repo(**hit["_source"]) for hit in raw_results["hits"]["hits"]]
+        repos = [
+            Repo(
+                id=hit["_id"],
+                name=hit["_source"]["name"],
+                description=hit["_source"]["description"],
+                readme=hit["_source"]["readme"]
+            )
+            for hit in raw_results["hits"]["hits"]
+        ]
         return repos
 
 
@@ -47,6 +67,17 @@ def search(q: str, number_of_result: Optional[int] = 1):
 def store_data(data: dict, index_name: Optional[str] = default_index_name) -> dict:
     required_fields = ["name", "description", "readme", "html_url"]
     missing_fields = [field for field in required_fields if field not in data]
+    if "readme" in data:
+        if not isinstance(data["readme"], str):
+            raise HTTPException(status_code=400, detail="Readme must be a string")
+        if len(data["readme"]) == 0:
+            raise HTTPException(status_code=400, detail="Readme cannot be empty")
+    
+        data["cleaned_readme"] = remove_all_tags(data["readme"])
+        try:
+            data["embedding"] = model.encode(data["cleaned_readme"]).tolist()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to generate embedding: {e}")
     if missing_fields:
         raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
 

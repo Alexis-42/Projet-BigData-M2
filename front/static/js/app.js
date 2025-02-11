@@ -50,7 +50,6 @@ async function sendChat() {
 
     appendMessage(userInput, 'user-message');
     document.getElementById("userInput").value = '';
-    document.querySelector('.llm-selector-container').style.display = 'none';
 
     try {
         const response = await fetch('/chat', {
@@ -161,8 +160,6 @@ async function sendChat() {
             botMessageContainer.innerHTML += buffer.join('');
         }
 
-        document.querySelector('.llm-selector-container').style.display = 'flex';
-
         const { readmeContent, remainingText } = extractReadmeContent(botMessageContainer.textContent);
         if (readmeContent) {
             displayReadmeContent(readmeContent);
@@ -172,7 +169,6 @@ async function sendChat() {
         botMessageContainer.scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
         console.error('Error:', error);
-        document.querySelector('.llm-selector-container').style.display = 'flex';
     }
 }
 

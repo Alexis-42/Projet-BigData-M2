@@ -6,3 +6,7 @@ class Repo(BaseModel):
     name: str
     description: Optional[str] = None
     readme: str
+
+class RagParams(BaseModel):
+    docCount: int
+    similarityThreshold: float

@@ -1,7 +1,8 @@
 services:
   front:
     build:
-      context: ./front
+      context: .
+      dockerfile: ./front/Dockerfile
     ports:
       - "5000:5000"
     networks:
@@ -39,7 +40,8 @@ services:
 
   pipeline-data-formatting:
     build:
-      context: ./pipeline/data_formatting
+      context: .
+      dockerfile: ./pipeline/data_formatting/Dockerfile
     depends_on:
       kafka:
         condition: service_healthy

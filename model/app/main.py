@@ -183,7 +183,7 @@ def prepare_input_for_LLM(user_query,params:RagParams):
     # Rechercher les documents les plus similaires
     k = 5  # Nombre de documents à récupérer
 
-    top_readmes = search(q = user_query, params)
+    top_readmes = search(q=user_query, params=params)
 
     # Préparer l'entrée pour le modèle
     input_text = (

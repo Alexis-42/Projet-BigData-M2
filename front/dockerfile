@@ -2,10 +2,10 @@ FROM python:3.10-alpine
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY ./front/requirements.txt .
 RUN pip3 install -r requirements.txt
 
-COPY . .
+COPY ./front .
 
 EXPOSE 5000
 

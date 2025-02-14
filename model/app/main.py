@@ -1,13 +1,17 @@
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
+from sentence_transformers import SentenceTransformer
 from es_connector import ES_connector
-from models import Repo
+from models import Repo, RagParams
+from common.text_utils.cleaning import remove_all_tags
 import time
 import uvicorn
 import os
 from dotenv import load_dotenv
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+import traceback
+from fastapi import HTTPException
 
 # Load model once at startup
 tokenizer = AutoTokenizer.from_pretrained("./flan-t5-large")
@@ -19,6 +23,8 @@ CLE_API_GITHUB = os.getenv('CLE_API_GITHUB')
 app = FastAPI()
 
 es = ES_connector()
+
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
 default_index_name = "github_repos_data"
 
@@ -32,20 +38,37 @@ def home():
     by default one repo but can return a list of repositories if `number_of_result` != 1.
 """
 @app.get("/search", response_model=List[Repo])
-def search(q: str, number_of_result: Optional[int] = 1):
+def search(q: str, params: RagParams):
+    query_vector = model.encode(q)
+
     search_query = {
         "query": {
-            "multi_match": {
-                "query": q,
-                "fields": ["name", "description", "readme"]
+            "script_score": {
+                "query": {"match_all": {}},
+                "script": {
+                    "source": "cosineSimilarity(params.query_vector, 'embedding') + 1.0",
+                    "params": {"query_vector": query_vector.tolist()}
+                }
             }
-        }
+        },
+        "size": params.docCount,
+        "min_score": 1.0 + params.similarityThreshold  # Adjust the threshold as needed
     }
-    raw_results = es.get_data(default_index_name, search_query, number_of_result)
-    if(raw_results is None or raw_results["hits"]["total"]["value"] == 0):
+
+    raw_results = es.get_data(default_index_name, search_query, params.docCount, min_score=1.0 + params.similarityThreshold)
+
+    if raw_results is None or raw_results["hits"]["total"]["value"] == 0:
         return []
     else:
-        repos = [Repo(**hit["_source"]) for hit in raw_results["hits"]["hits"]]
+        repos = [
+            Repo(
+                id=hit["_id"],
+                name=hit["_source"]["name"],
+                description=hit["_source"]["description"],
+                readme=hit["_source"]["readme"]
+            )
+            for hit in raw_results["hits"]["hits"]
+        ]
         return repos
 
 
@@ -57,6 +80,17 @@ def search(q: str, number_of_result: Optional[int] = 1):
 def store_data(data: dict, index_name: Optional[str] = default_index_name) -> dict:
     required_fields = ["name", "description", "readme", "html_url"]
     missing_fields = [field for field in required_fields if field not in data]
+    if "readme" in data:
+        if not isinstance(data["readme"], str):
+            raise HTTPException(status_code=400, detail="Readme must be a string")
+        if len(data["readme"]) == 0:
+            raise HTTPException(status_code=400, detail="Readme cannot be empty")
+    
+        data["cleaned_readme"] = remove_all_tags(data["readme"])
+        try:
+            data["embedding"] = model.encode(data["cleaned_readme"]).tolist()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to generate embedding: {e}")
     if missing_fields:
         raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
 
@@ -72,22 +106,19 @@ def store_data(data: dict, index_name: Optional[str] = default_index_name) -> di
 """
     This endpoint calls your custom LLM.
 """
-import requests
-
 @app.post("/call_llm/")
-def call_llm(prompt: str):
+def call_llm(prompt: str, params: Optional[RagParams] = RagParams(docCount=3, similarityThreshold=0.7)):
     try:
-        return StreamingResponse(generate_readme_with_LLM(prompt), media_type="text/event-stream")
+        return StreamingResponse(generate_readme_with_LLM(prompt, params), media_type="text/event-stream")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate LLM response: {str(e)}")
-
-
-import traceback
-from fastapi import HTTPException
-
-def generate_readme_with_LLM(prompt: str, model_name: str = "./flan-t5-large"):
+    
+"""
+    This function generates a README using the LLM model.
+"""
+def generate_readme_with_LLM(prompt: str, params : RagParams):
     try:
-        input_text = prepare_input_for_LLM(prompt)
+        input_text = prepare_input_for_LLM(prompt, params)
         inputs = tokenizer(input_text, return_tensors="pt", max_length=512, truncation=True)
 
         output_sequences = model.generate(
@@ -137,7 +168,7 @@ EXAMPLE_README = """
     git clone https://github.com/username/example-project.git
 """
 
-def prepare_input_for_LLM(user_query,k=5):
+def prepare_input_for_LLM(user_query,params:RagParams):
     """
     Prepare the input for the LLM to generate a README based on the user query and related README files.
 
@@ -152,7 +183,7 @@ def prepare_input_for_LLM(user_query,k=5):
     # Rechercher les documents les plus similaires
     k = 5  # Nombre de documents à récupérer
 
-    top_readmes = search(q = user_query, number_of_result=k)
+    top_readmes = search(q=user_query, params=params)
 
     # Préparer l'entrée pour le modèle
     input_text = (

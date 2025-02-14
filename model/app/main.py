@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from sentence_transformers import SentenceTransformer
 from es_connector import ES_connector
-from models import Repo, RagParams
+from models import Repo, RagParams, ProjectInfo
 from common.text_utils.cleaning import remove_all_tags
 import time
 import uvicorn
@@ -19,6 +19,28 @@ model = AutoModelForSeq2SeqLM.from_pretrained("./flan-t5-large")
 
 
 CLE_API_GITHUB = os.getenv('CLE_API_GITHUB')
+
+
+# Exemple structuré de README en Markdown
+EXAMPLE_README = """
+    # Example Project
+
+    ## Description
+    This is a sample project demonstrating best practices for structuring a README file. It includes sections that provide all necessary details to understand and use the project effectively.
+
+    ## Features
+    - List of features here
+    - Add any additional functionality
+
+    ## Technologies Used
+    - Technology 1
+    - Technology 2
+
+    ## Installation
+    1. Clone the repository:
+    ```bash
+    git clone https://github.com/username/example-project.git
+"""
 
 app = FastAPI()
 
@@ -52,7 +74,6 @@ def search(q: str, params: RagParams):
             }
         },
         "size": params.docCount,
-        "min_score": 1.0 + params.similarityThreshold  # Adjust the threshold as needed
     }
 
     raw_results = es.get_data(default_index_name, search_query, params.docCount, min_score=1.0 + params.similarityThreshold)
@@ -107,18 +128,31 @@ def store_data(data: dict, index_name: Optional[str] = default_index_name) -> di
     This endpoint calls your custom LLM.
 """
 @app.post("/call_llm/")
-def call_llm(prompt: str, params: Optional[RagParams] = RagParams(docCount=3, similarityThreshold=0.7)):
+def call_llm(project_info: ProjectInfo, params: Optional[RagParams] = RagParams(docCount=3, similarityThreshold=0.7)):
     try:
-        return StreamingResponse(generate_readme_with_LLM(prompt, params), media_type="text/event-stream")
+        # Concaténer les informations pour former la requête de recherche
+        search_query = f"{project_info.name} {project_info.description} {project_info.technologies}"
+        return StreamingResponse(generate_readme_with_LLM(search_query, params), media_type="text/event-stream")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate LLM response: {str(e)}")
     
 """
     This function generates a README using the LLM model.
 """
-def generate_readme_with_LLM(prompt: str, params : RagParams):
+def generate_readme_with_LLM(search_query: str, params : RagParams):
     try:
-        input_text = prepare_input_for_LLM(prompt, params)
+        top_readmes = search(q=search_query, params=params)
+
+        # Préparer l'entrée pour le modèle
+        input_text = (
+            f"Generate a README based on the following topic: {search_query}.\n\n"
+            f"Here is an example of a well-structured README on which you can base the structure of your response:\n\n{EXAMPLE_README}\n\n"
+            f"Here are some related README files:\n\n" +
+            "\n\n".join([f"Repository: {repo.name}\nREADME:\n{repo.readme}" for repo in top_readmes]) + "\n\n"
+            f"Please generate a complete and formatted README in English for my project based on the example for the structure and followed by the related README files, ready to be copied into a README.md file.\n"
+            f"Do not include this prompt in the generated README."
+            f"Replace by \\n the line breaks in the generated README."
+        )
         inputs = tokenizer(input_text, return_tensors="pt", max_length=512, truncation=True)
 
         output_sequences = model.generate(
@@ -146,57 +180,6 @@ def generate_readme_with_LLM(prompt: str, params : RagParams):
         traceback.print_exc()  # Affiche un traceback détaillé
         raise HTTPException(status_code=500, detail=f"Failed generate LLM in generate LLM response: {str(e)}")
 
-
-# Exemple structuré de README en Markdown
-EXAMPLE_README = """
-    # Example Project
-
-    ## Description
-    This is a sample project demonstrating best practices for structuring a README file. It includes sections that provide all necessary details to understand and use the project effectively.
-
-    ## Features
-    - List of features here
-    - Add any additional functionality
-
-    ## Technologies Used
-    - Technology 1
-    - Technology 2
-
-    ## Installation
-    1. Clone the repository:
-    ```bash
-    git clone https://github.com/username/example-project.git
-"""
-
-def prepare_input_for_LLM(user_query,params:RagParams):
-    """
-    Prepare the input for the LLM to generate a README based on the user query and related README files.
-
-    Args:
-        user_query (str): User query.
-        readmes (list): List of related README files.
-        k (int): Number of related README files to include. Defaults to 5.
-
-    Returns:
-        str: Input text for the LLM.
-    """
-    # Rechercher les documents les plus similaires
-    k = 5  # Nombre de documents à récupérer
-
-    top_readmes = search(q=user_query, params=params)
-
-    # Préparer l'entrée pour le modèle
-    input_text = (
-        f"Generate a README based on the following topic: {user_query}.\n\n"
-        f"Here is an example of a well-structured README on which you can base the structure of your response:\n\n{EXAMPLE_README}\n\n"
-        f"Here are some related README files:\n\n" +
-        "\n\n".join([f"Repository: {repo.name}\nREADME:\n{repo.readme}" for repo in top_readmes]) + "\n\n"
-        f"Please generate a complete and formatted README in English for my project based on the example for the structure and followed by the related README files, ready to be copied into a README.md file.\n"
-        f"Do not include this prompt in the generated README."
-        f"Replace by \\n the line breaks in the generated README."
-    )
-
-    return input_text
 
    
 @app.get("/llm_list")

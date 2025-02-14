@@ -20,15 +20,39 @@ fastapi_llm_url = "http://model:8000/call_llm/"
 def index():
     return render_template('/index.html')
     
+# @app.route('/chat', methods=['POST'])
+# def chat():
+#     user_message = request.json.get('message')
+    
+#     def generate():
+#         try:
+#             with requests.post(
+#                 fastapi_llm_url,
+#                 params={"prompt": user_message},
+#                 stream=True
+#             ) as response:
+#                 response.raise_for_status()
+#                 for chunk in response.iter_content(chunk_size=None):
+#                     if chunk:
+#                         yield chunk.decode()
+#         except Exception as e:
+#             yield f"Erreur : {str(e)}"
+
+#     return Response(stream_with_context(generate()), content_type='text/plain')
+
 @app.route('/chat', methods=['POST'])
 def chat():
-    user_message = request.json.get('message')
+    data = request.json
+    project_info = data.get('message')
     
+    if not project_info:
+        return jsonify({"error": "Project information is required"}), 400
+
     def generate():
         try:
             with requests.post(
                 fastapi_llm_url,
-                params={"prompt": user_message},
+                params={"project_info": data},
                 stream=True
             ) as response:
                 response.raise_for_status()
@@ -36,6 +60,7 @@ def chat():
                     if chunk:
                         yield chunk.decode()
         except Exception as e:
+            print(f"Erreur lors de l'appel à FastAPI : {str(e)}") 
             yield f"Erreur : {str(e)}"
 
     return Response(stream_with_context(generate()), content_type='text/plain')

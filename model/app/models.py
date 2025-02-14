@@ -10,3 +10,8 @@ class Repo(BaseModel):
 class RagParams(BaseModel):
     docCount: int
     similarityThreshold: float
+
+class ProjectInfo(BaseModel):
+    name: str
+    description: str
+    technologies: str

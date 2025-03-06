@@ -64,6 +64,7 @@ async function sendChat() {
     document.getElementById("projectDescription").value = '';
     document.getElementById("projectTechnologies").value = '';
     console.log('Envoi de la requête:', projectData);
+    console.log('Types des données:', typeof projectData.name, typeof projectData.description, typeof projectData.technologies);
     console.log('Paramètres RAG:', ragParams);
 
     try {
@@ -71,10 +72,10 @@ async function sendChat() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                message: projectData,
-                rag_params: {
-                    doc_count: ragParams.docCount,
-                    similarity: ragParams.similarityThreshold
+                project_info: projectData, 
+                rag_params: { 
+                    docCount: ragParams.docCount,
+                    similarityThreshold: ragParams.similarityThreshold
                 }
             })
         });

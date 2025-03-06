@@ -3,19 +3,19 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from sentence_transformers import SentenceTransformer
 from es_connector import ES_connector
-from models import Repo, RagParams, ProjectInfo
+from models import Repo, RagParams, ProjectInfo, ReadmeDatas
 from common.text_utils.cleaning import remove_all_tags
 import time
 import uvicorn
 import os
 from dotenv import load_dotenv
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, TextStreamer
 import traceback
 from fastapi import HTTPException
 
 # Load model once at startup
 tokenizer = AutoTokenizer.from_pretrained("./flan-t5-large")
-model = AutoModelForSeq2SeqLM.from_pretrained("./flan-t5-large")
+llm_model = AutoModelForSeq2SeqLM.from_pretrained("./flan-t5-large")
 
 
 CLE_API_GITHUB = os.getenv('CLE_API_GITHUB')
@@ -46,7 +46,7 @@ app = FastAPI()
 
 es = ES_connector()
 
-model = SentenceTransformer('all-MiniLM-L6-v2')
+embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 default_index_name = "github_repos_data"
 
@@ -61,7 +61,7 @@ def home():
 """
 @app.get("/search", response_model=List[Repo])
 def search(q: str, params: RagParams):
-    query_vector = model.encode(q)
+    query_vector = embedding_model.encode(q)
 
     search_query = {
         "query": {
@@ -76,16 +76,22 @@ def search(q: str, params: RagParams):
         "size": params.docCount,
     }
 
-    raw_results = es.get_data(default_index_name, search_query, params.docCount, min_score=1.0 + params.similarityThreshold)
+    raw_results = es.get_data(default_index_name, search_query, params.docCount)
 
     if raw_results is None or raw_results["hits"]["total"]["value"] == 0:
         return []
     else:
         repos = [
-            Repo(
+            # Repo(
+            #     id=hit["_id"],
+            #     name=hit["_source"]["name"],
+            #     description=hit["_source"]["description"],
+            #     readme=hit["_source"]["readme"]
+            # )
+            ReadmeDatas(
                 id=hit["_id"],
                 name=hit["_source"]["name"],
-                description=hit["_source"]["description"],
+                cleaned_readme=hit["_source"]["cleaned_readme"],
                 readme=hit["_source"]["readme"]
             )
             for hit in raw_results["hits"]["hits"]
@@ -109,7 +115,7 @@ def store_data(data: dict, index_name: Optional[str] = default_index_name) -> di
     
         data["cleaned_readme"] = remove_all_tags(data["readme"])
         try:
-            data["embedding"] = model.encode(data["cleaned_readme"]).tolist()
+            data["embedding"] = embedding_model.encode(data["cleaned_readme"]).tolist()
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to generate embedding: {e}")
     if missing_fields:
@@ -124,17 +130,24 @@ def store_data(data: dict, index_name: Optional[str] = default_index_name) -> di
     except Exception as e:
         raise Exception(f"Failed to index data: {str(e)}")
    
+from fastapi import Body
+
 """
     This endpoint calls your custom LLM.
 """
 @app.post("/call_llm/")
-def call_llm(project_info: ProjectInfo, params: Optional[RagParams] = RagParams(docCount=3, similarityThreshold=0.7)):
+def call_llm(
+    project_info: ProjectInfo = Body(...), 
+    params: RagParams = Body(default=RagParams(docCount=3, similarityThreshold=0.7))
+):
     try:
         # Concaténer les informations pour former la requête de recherche
         search_query = f"{project_info.name} {project_info.description} {project_info.technologies}"
+        print(f"Search query: {search_query}")
         return StreamingResponse(generate_readme_with_LLM(search_query, params), media_type="text/event-stream")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate LLM response: {str(e)}")
+
     
 """
     This function generates a README using the LLM model.
@@ -145,32 +158,41 @@ def generate_readme_with_LLM(search_query: str, params : RagParams):
 
         # Préparer l'entrée pour le modèle
         input_text = (
-            f"Generate a README based on the following topic: {search_query}.\n\n"
-            f"Here is an example of a well-structured README on which you can base the structure of your response:\n\n{EXAMPLE_README}\n\n"
-            f"Here are some related README files:\n\n" +
-            "\n\n".join([f"Repository: {repo.name}\nREADME:\n{repo.readme}" for repo in top_readmes]) + "\n\n"
-            f"Please generate a complete and formatted README in English for my project based on the example for the structure and followed by the related README files, ready to be copied into a README.md file.\n"
+            f"Generate a simple and effective README for a project about: {search_query}.\n\n"
+            f"The README should be well-structured, concise, and include the following sections:\n"
+            f"1. **Project Title**: A clear and descriptive title.\n"
+            f"2. **Description**: A brief overview of the project, its purpose, and its main features.\n"
+            f"3. **Installation**: Step-by-step instructions to install and set up the project.\n"
+            f"4. **Usage**: Examples and instructions on how to use the project.\n"
+            f"5. **Contributing**: Guidelines for contributing to the project.\n"
+            f"6. **License**: Information about the project's license.\n\n"
+            f"Here is an example of a well-structured README:\n\n{EXAMPLE_README}\n\n"
+            f"Here are some related README files for inspiration:\n\n" +
+            "\n\n".join([f"Repository: {repo.name}\nREADME:\n{repo.cleaned_readme}" for repo in top_readmes]) + "\n\n"
+            f"Please generate a README in English for my project based on the structure above. "
+            f"Ensure the content is clear, concise, and ready to be copied into a README.md file.\n"
             f"Do not include this prompt in the generated README."
-            f"Replace by \\n the line breaks in the generated README."
         )
         inputs = tokenizer(input_text, return_tensors="pt", max_length=512, truncation=True)
 
-        output_sequences = model.generate(
+        # Générer la réponse en streaming
+        output_token_ids = llm_model.generate(
             input_ids=inputs['input_ids'],
             max_length=512,
             num_return_sequences=1,
             no_repeat_ngram_size=2,
-            do_sample=True,
+            do_sample=True,  
             top_k=50,
             top_p=0.95,
             temperature=0.7,
             early_stopping=True
         )
-
-        for token_ids in output_sequences:
-            token = tokenizer.decode(token_ids, skip_special_tokens=True)
+        print(f"Output lenth: {len(output_token_ids)} = {output_token_ids}")
+        for token_id in output_token_ids:
+            # Décoder le token généré
+            token = tokenizer.decode(token_id, skip_special_tokens=True)
+            print("Token",token)
             yield token
-            time.sleep(0.1)  # Simuler un délai pour le streaming
 
     except GeneratorExit:
         print("Client disconnected")

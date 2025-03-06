@@ -1,3 +1,4 @@
+import json
 from flask import Flask, render_template, request, Response, stream_with_context, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -20,31 +21,16 @@ fastapi_llm_url = "http://model:8000/call_llm/"
 def index():
     return render_template('/index.html')
     
-# @app.route('/chat', methods=['POST'])
-# def chat():
-#     user_message = request.json.get('message')
-    
-#     def generate():
-#         try:
-#             with requests.post(
-#                 fastapi_llm_url,
-#                 params={"prompt": user_message},
-#                 stream=True
-#             ) as response:
-#                 response.raise_for_status()
-#                 for chunk in response.iter_content(chunk_size=None):
-#                     if chunk:
-#                         yield chunk.decode()
-#         except Exception as e:
-#             yield f"Erreur : {str(e)}"
-
-#     return Response(stream_with_context(generate()), content_type='text/plain')
-
 @app.route('/chat', methods=['POST'])
 def chat():
     data = request.json
-    project_info = data.get('message')
-    
+    project_info = data.get('project_info')
+    rag_params = data.get('rag_params')
+    body_data = {
+        "project_info": project_info,
+        "params": rag_params
+    }
+
     if not project_info:
         return jsonify({"error": "Project information is required"}), 400
 
@@ -52,18 +38,23 @@ def chat():
         try:
             with requests.post(
                 fastapi_llm_url,
-                params={"project_info": data},
+                json=body_data,  
                 stream=True
             ) as response:
+                if response.status_code == 422:
+                    error_detail = response.json().get('detail', 'Unknown error')
+                    yield f"Erreur de validation: {error_detail}"
+                    return
                 response.raise_for_status()
                 for chunk in response.iter_content(chunk_size=None):
                     if chunk:
+                        print(f"Reçu un chunk de données : {chunk.decode()}")
                         yield chunk.decode()
         except Exception as e:
-            print(f"Erreur lors de l'appel à FastAPI : {str(e)}") 
-            yield f"Erreur : {str(e)}"
+            yield f"Erreur lors du chat: {str(e)}"
 
     return Response(stream_with_context(generate()), content_type='text/plain')
+
 
 @app.route('/get_llm_list', methods=['GET'])
 def get_llm_list():

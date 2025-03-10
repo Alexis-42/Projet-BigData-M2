@@ -73,9 +73,6 @@ def call_custom_llm(prompt: str) -> str:
         return response.json().get("response", "")
     except requests.exceptions.RequestException as e:
         raise ValueError(f"Failed to call custom LLM: {str(e)}")
-
-def open_browser():
-    webbrowser.open_new('http://127.0.0.1:5000/')
     
 @app.route('/get_readme_files', methods=['GET'])
 def get_readme_files():

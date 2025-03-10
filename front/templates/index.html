@@ -37,10 +37,23 @@
             <div class="chat-area" id="chatArea">
                 <!-- Messages will be dynamically inserted here -->
             </div>
-            <div class="input-container">
+            <!-- <div class="input-container">
                 <input type="text" id="userInput" placeholder="Type your message here..." onkeypress="if(event.keyCode == 13) sendChat()">
                 <button id="sendButton">Send</button>
+            </div> -->
+            <div id="projectForm" class="input-container">
+                <label for="projectName">Nom du projet:</label>
+                <input type="text" id="projectName" placeholder="Entrez le nom du projet">
+                
+                <label for="projectDescription">Description du projet:</label>
+                <input id="projectDescription" placeholder="Entrez la description du projet"></input>
+                
+                <label for="projectTechnologies">Technologies utilisées:</label>
+                <input type="text" id="projectTechnologies" placeholder="Entrez les technologies utilisées">
+                
+                <button id="sendButton">Send</button>
             </div>
+            
         </div>
         <div class="readme-container" id="readmeContainer">
             <div class="readme-header">

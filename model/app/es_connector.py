@@ -42,5 +42,11 @@ class ES_connector:
         except Exception as e:
             print(e)
 
+    def get_all_data(self, index_name):
+        try:
+            result = self.es_client.search(index=index_name, body={"query": {"match_all": {}}}, size=100)
+            return result
+        except Exception as e:
+            print(e)
 
 

@@ -4,7 +4,7 @@ body, html {
     font-family: 'Rubik', sans-serif;
     background-color: #121212;
     color: #e0e0e0;
-    overflow: hidden;
+    /* overflow: hidden; */
 }
 .params-container {
     width: 30%;
@@ -121,14 +121,16 @@ body, html {
 
 .input-container {
     display: flex;
-    padding: 8px;
+    flex-direction: column; /* Aligne les éléments verticalement */
+    padding: 16px; /* Augmente légèrement le padding pour un peu plus d'espace */
     background-color: #1e1e1e;
+    gap: 15px; /* Ajoute de l'espace entre chaque champ */
 }
 
 .input-container input {
-    flex-grow: 1;
-    padding: 8px;
-    margin-right: 8px;
+    padding: 10px;
+    margin-right: 0; /* Enlève le margin droit pour que les inputs soient bien alignés */
+    margin-bottom: 10px; /* Ajoute un petit espace entre les champs */
     border: 1px solid #444;
     border-radius: 4px;
     font-size: 14px;
@@ -143,20 +145,20 @@ body, html {
 }
 
 .input-container button {
-    padding: 8px 16px;
+    padding: 12px 16px; /* Augmente le padding du bouton pour l'aérer */
     border: none;
     border-radius: 4px;
     background-color: #007bff;
     color: white;
-    font-size: 14px;
+    font-size: 16px; /* Augmente la taille du texte */
     cursor: pointer;
     transition: background-color 0.3s;
+    align-self: flex-start; /* Aligne le bouton à gauche */
 }
 
 .input-container button:hover {
     background-color: #0056b3;
 }
-
 .message {
     margin: 8px 0;
     padding: 10px;

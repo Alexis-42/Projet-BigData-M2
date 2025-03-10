@@ -1,1 +1,3 @@
 .env
+/model/app/flan-t5-large/
+/model/Recuperation-data.ipynb

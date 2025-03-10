@@ -9,18 +9,23 @@ services:
       - fastapi-network
     depends_on:
       - model
+    restart: always
 
   model:
     build:
       context: .
       dockerfile: ./model/Dockerfile
     ports:
-      - "8000:8000"
+      - "8000:8000"  # Port pour FastAPI
+      - "5001:5001"  # Port pour MLflow UI
     depends_on:
       - elasticsearch
     networks:
       - elastic-network
       - fastapi-network
+    volumes:
+      - mlflow-data:/mlflow
+    restart: always
 
   pipeline-data-retrieval:
     build:
@@ -29,6 +34,8 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      model:
+        condition: service_started
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_BROKER_URL: kafka:29092
@@ -36,7 +43,7 @@ services:
       - .env
     networks:
       - kafka-network
-      
+    restart: always
 
   pipeline-data-formatting:
     build:
@@ -45,12 +52,15 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      model:
+        condition: service_started
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_BROKER_URL: kafka:29092
     networks:
       - kafka-network
       - fastapi-network
+    restart: always
 
   zookeeper:
       image: confluentinc/cp-zookeeper:latest
@@ -112,7 +122,7 @@ services:
     ports:
       - 5601:5601
     networks:
-    - elastic-network
+      - elastic-network
     volumes:
       - kibana-data:/usr/share/kibana/data
   
@@ -128,4 +138,6 @@ volumes:
   elasticsearch-data:
     driver: local
   kibana-data:
+    driver: local
+  mlflow-data:
     driver: local

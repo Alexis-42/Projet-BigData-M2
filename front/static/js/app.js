@@ -45,21 +45,37 @@ let ragParams = {
 };
 
 async function sendChat() {
-    const userInput = document.getElementById("userInput").value.trim();
-    if (!userInput) return;
+    // const userInput = document.getElementById("userInput").value.trim();
+    // if (!userInput) return;
+    const projectData = {
+        name: document.getElementById("projectName").value.trim(),
+        description: document.getElementById("projectDescription").value.trim(),
+        technologies: document.getElementById("projectTechnologies").value.trim()
+    };
 
-    appendMessage(userInput, 'user-message');
-    document.getElementById("userInput").value = '';
+    if (!projectData.name || !projectData.description || !projectData.technologies) {
+        alert("Veuillez remplir tous les champs du formulaire.");
+        return;
+    }
+
+    appendMessage(`Projet soumis : ${projectData.name}`, 'user-message');
+    
+    document.getElementById("projectName").value = '';
+    document.getElementById("projectDescription").value = '';
+    document.getElementById("projectTechnologies").value = '';
+    console.log('Envoi de la requête:', projectData);
+    console.log('Types des données:', typeof projectData.name, typeof projectData.description, typeof projectData.technologies);
+    console.log('Paramètres RAG:', ragParams);
 
     try {
         const response = await fetch('/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                message: userInput,
-                rag_params: {
-                    doc_count: ragParams.docCount,
-                    similarity: ragParams.similarityThreshold
+                project_info: projectData, 
+                rag_params: { 
+                    docCount: ragParams.docCount,
+                    similarityThreshold: ragParams.similarityThreshold
                 }
             })
         });
@@ -168,7 +184,7 @@ async function sendChat() {
 
         botMessageContainer.scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error sending:', error);
     }
 }
 

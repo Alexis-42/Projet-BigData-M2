@@ -16,12 +16,15 @@ services:
       context: .
       dockerfile: ./model/Dockerfile
     ports:
-      - "8000:8000"
+      - "8000:8000"  # Port pour FastAPI
+      - "5001:5001"  # Port pour MLflow UI
     depends_on:
       - elasticsearch
     networks:
       - elastic-network
       - fastapi-network
+    volumes:
+      - mlflow-data:/mlflow
     restart: always
 
   pipeline-data-retrieval:
@@ -135,4 +138,6 @@ volumes:
   elasticsearch-data:
     driver: local
   kibana-data:
+    driver: local
+  mlflow-data:
     driver: local

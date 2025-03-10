@@ -19,26 +19,6 @@ fastapi_llm_url = "http://model:8000/call_llm/"
 @app.route('/')
 def index():
     return render_template('/index.html')
-    
-# @app.route('/chat', methods=['POST'])
-# def chat():
-#     user_message = request.json.get('message')
-    
-#     def generate():
-#         try:
-#             with requests.post(
-#                 fastapi_llm_url,
-#                 params={"prompt": user_message},
-#                 stream=True
-#             ) as response:
-#                 response.raise_for_status()
-#                 for chunk in response.iter_content(chunk_size=None):
-#                     if chunk:
-#                         yield chunk.decode()
-#         except Exception as e:
-#             yield f"Erreur : {str(e)}"
-
-#     return Response(stream_with_context(generate()), content_type='text/plain')
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -82,9 +62,6 @@ def call_custom_llm(prompt: str) -> str:
         return response.json().get("response", "")
     except requests.exceptions.RequestException as e:
         raise ValueError(f"Failed to call custom LLM: {str(e)}")
-
-def open_browser():
-    webbrowser.open_new('http://127.0.0.1:5000/')
     
 @app.route('/get_readme_files', methods=['GET'])
 def get_readme_files():

@@ -82,12 +82,6 @@ def search(q: str, params: RagParams):
         return []
     else:
         repos = [
-            # Repo(
-            #     id=hit["_id"],
-            #     name=hit["_source"]["name"],
-            #     description=hit["_source"]["description"],
-            #     readme=hit["_source"]["readme"]
-            # )
             ReadmeDatas(
                 id=hit["_id"],
                 name=hit["_source"]["name"],
@@ -149,58 +143,52 @@ def call_llm(
         raise HTTPException(status_code=500, detail=f"Failed to generate LLM response: {str(e)}")
 
     
-"""
-    This function generates a README using the LLM model.
-"""
-def generate_readme_with_LLM(search_query: str, params : RagParams):
+def generate_readme_with_LLM(search_query: str, params: RagParams):
     try:
-        top_readmes = search(q=search_query, params=params)
-
-        # Préparer l'entrée pour le modèle
-        input_text = (
-            f"Generate a simple and effective README for a project about: {search_query}.\n\n"
-            f"The README should be well-structured, concise, and include the following sections:\n"
-            f"1. **Project Title**: A clear and descriptive title.\n"
-            f"2. **Description**: A brief overview of the project, its purpose, and its main features.\n"
-            f"3. **Installation**: Step-by-step instructions to install and set up the project.\n"
-            f"4. **Usage**: Examples and instructions on how to use the project.\n"
-            f"5. **Contributing**: Guidelines for contributing to the project.\n"
-            f"6. **License**: Information about the project's license.\n\n"
-            f"Here is an example of a well-structured README:\n\n{EXAMPLE_README}\n\n"
-            f"Here are some related README files for inspiration:\n\n" +
-            "\n\n".join([f"Repository: {repo.name}\nREADME:\n{repo.cleaned_readme}" for repo in top_readmes]) + "\n\n"
-            f"Please generate a README in English for my project based on the structure above. "
-            f"Ensure the content is clear, concise, and ready to be copied into a README.md file.\n"
-            f"Do not include this prompt in the generated README."
+        # Phase 1 - Génération du titre
+        title_prompt = (
+            f"Corrige et formate ce nom de projet en titre Markdown professionnel : {search_query}.\n"
+            f"Ne renvoie que le titre corrigé sans commentaires."
         )
-        inputs = tokenizer(input_text, return_tensors="pt", max_length=512, truncation=True)
+        title_inputs = tokenizer(title_prompt, return_tensors="pt", max_length=128, truncation=True)
+        title_output = llm_model.generate(**title_inputs, max_length=30)
+        project_title = tokenizer.decode(title_output[0], skip_special_tokens=True).strip()
+        print(f"Titre généré : {project_title}")
+        yield f"# {project_title}\n\n"
 
-        # Générer la réponse en streaming
-        output_token_ids = llm_model.generate(
-            input_ids=inputs['input_ids'],
-            max_length=512,
-            num_return_sequences=1,
-            no_repeat_ngram_size=2,
-            do_sample=True,  
-            top_k=50,
-            top_p=0.95,
-            temperature=0.7,
-            early_stopping=True
+        # Phase 2 - Génération de la description
+        desc_prompt = (
+            f"Génère une description concise pour le projet '{project_title}' incluant :\n"
+            f"- Objectif principal\n- Fonctionnalités clés\n- Public cible\n"
+            f"Format : paragraphe unique en Markdown"
         )
-        print(f"Output lenth: {len(output_token_ids)} = {output_token_ids}")
-        for token_id in output_token_ids:
-            # Décoder le token généré
-            token = tokenizer.decode(token_id, skip_special_tokens=True)
-            print("Token",token)
-            yield token
+        desc_inputs = tokenizer(desc_prompt, return_tensors="pt", max_length=512, truncation=True)
+
+        project_desc = llm_model.generate(**desc_inputs, max_length=300)
+        
+        print(f"Description générée : {project_desc}")
+        yield "## Description\n"
+        for token in project_desc:
+            yield token.replace("<pad>", "").replace("</s>", "")
+        yield "\n\n"
+
+        # Phase 3 - Génération des technologies
+        tech_prompt = (
+            f"Liste les technologies principales utilisées dans '{project_title}' sous forme de liste Markdown.\n"
+            f"Exemple :\n- Python\n- React\n- Docker"
+        )
+        tech_inputs = tokenizer(tech_prompt, return_tensors="pt", max_length=256, truncation=True)
+        tech_output = llm_model.generate(**tech_inputs, max_length=150)
+        technologies = tokenizer.decode(tech_output[0], skip_special_tokens=True)
+        print(f"Technologies générées : {technologies}")
+        yield f"## Technologies\n{technologies}\n\n"
 
     except GeneratorExit:
         print("Client disconnected")
     except Exception as e:
-        print(f"Exception occurred: {str(e)}")  # Log de l'exception
-        print("Traceback of the exception:")
-        traceback.print_exc()  # Affiche un traceback détaillé
-        raise HTTPException(status_code=500, detail=f"Failed generate LLM in generate LLM response: {str(e)}")
+        print(f"Erreur : {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
    

@@ -13,6 +13,10 @@ L'architecture du projet est composée des éléments suivants :
   **API** (FastAPI) : Service d'API permettant la communication avec le modèle de machine learning. Elle est responsable de la gestion des requêtes liées à la génération des README et à l'interaction avec la base de données Elasticsearch.
   
   **Modèle** (LLM) : Modèle de langage utilisé pour générer des README en fonction des données récupérées via Elasticsearch.
+## Diagramme d'Architecture
+Voici un diagramme représentant l'architecture du projet :
+
+![Architecture Diagram](architecture.png)
 
 ## Installation 
 **Cloner le projet**
@@ -51,4 +55,5 @@ et le placer tel que : /model/app/flan-t5-large/
 ## Mise en route
 Lancer Docker Desktop et saisir dans un terminal à la racine du projet :
 docker-compose up -d --build
+Lancer dans un navigateur le lien : https://localhost/5000
 
